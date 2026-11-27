@@ -316,6 +316,7 @@ public static partial class SimEngine
         {
             // A pick from the draw pile (Cleanse): as many as it holds (with no pile read, the adapter's count, less what's been taken).
             var inPile = player.Draw?.Count ?? Math.Max(0, take.Matching - state.TakeMatching[TakenKey(take)]);
+            if (ChosenCount(state, take, inPile)) return new[] { state };
             count = Math.Min(take.Most, inPile);
             if (player.Draw == null) state.TakeMatching = state.TakeMatching.Add(TakenKey(take), count);
             state.PlayTaken = count;
@@ -333,6 +334,7 @@ public static partial class SimEngine
             return new[] { state };
         }
         var pool = take.EventIfNot != null ? inHand : matching;
+        if (ChosenCount(state, take, pool)) return new[] { state };
         count = take.Way == HandTakeWay.Each ? pool : Math.Min(take.Most, pool);
         if (take.EventIfNot != null)
         {
@@ -369,6 +371,17 @@ public static partial class SimEngine
         }
         state.PlayTaken = count;
         return TakenEvents(new[] { state }, take, cardEvent, count);
+    }
+
+    /// <summary>
+    /// A take whose count you choose (TakeFromHandAction.ChoosesHowMany: decision #406) with a card it could take: how many is your later decision, so
+    /// what follows is unknown (the simulation carries why), as Neow's Fury's take into your hand is. None to take: it takes none, certainly.
+    /// </summary>
+    private static bool ChosenCount(SimState state, TakeFromHandAction take, int pool)
+    {
+        if (!take.ChoosesHowMany || pool <= 0 || take.Most <= 0) return false;
+        state.Unmodelled ??= "you choose how many cards it takes from your hand";
+        return true;
     }
 
     /// <summary>Each card taken in turn: its event, then the take's per-card actions.</summary>

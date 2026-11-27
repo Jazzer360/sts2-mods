@@ -73,7 +73,7 @@ public static class HandModelled
             new[] { "SimEngine.DrawCards", "SimEngine.DrawOne", "SimEngine.DrawsStopped", "SimEngine.DrawPrevented", "SimEngine.Drawn", "SimEngine.DrawReactions", "SimEngine.DrawsFromPile", "SimEngine.RoomIn", "SimEngine.JoinHand", "SimEngine.RunDrawnCard", "SimDrawPile.Shuffled", "SimDrawPile.ShuffledWithDiscard" },
             new[] { "CardPileCmd.Draw", "CardPileCmd.DrawInternal", "CardPileCmd.Shuffle", "CardPileCmd.ShuffleIfNecessary", "Hook.ShouldDraw", "Hook.AfterPreventingDraw", "Hook.AfterCardDrawn", "Hook.ModifyShuffleOrder", "Hook.AfterShuffle" }),
         new("Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners",
-            new[] { "SimEngine.RunTakeFromHand", "SimEngine.TakeFromHand", "SimEngine.TakenEvents", "SimEngine.TakenKey", "SimEngine.ZeroedMatching", "SimEngine.JoinsTakes", "SimEngine.RunLeaveHand",
+            new[] { "SimEngine.RunTakeFromHand", "SimEngine.TakeFromHand", "SimEngine.ChosenCount", "SimEngine.TakenEvents", "SimEngine.TakenKey", "SimEngine.ZeroedMatching", "SimEngine.JoinsTakes", "SimEngine.RunLeaveHand",
                 "SimEngine.RunExhaustFromHand", "SimEngine.ExhaustChosenFromDrawPile", "SimEngine.RunTakeToHand", "SimEngine.TakeToHand", "SimEngine.TakeOne", "SimEngine.Less", "SimEngine.InPile",
                 "SimEngine.ProfileIn", "SimEngine.TakenId", "SimEngine.Discarded", "SimEngine.OnTop", "SimEngine.IntoDrawPile", "SimEngine.MadeIntoDrawPile", "SimEngine.AddToHand", "SimEngine.CardEvents", "SimEngine.CardEventsOf", "SimEngine.OneCardEvent", "SimEngine.RunCardEvent",
                 "SimEngine.FireCardEvent", "SimEngine.CountEvent", "SimEngine.ProcCardEvent", "SimEngine.Raise", "SimEngine.DrainPending" },

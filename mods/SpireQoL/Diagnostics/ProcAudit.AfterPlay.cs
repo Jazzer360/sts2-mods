@@ -56,6 +56,13 @@ public sealed partial class ProcAudit
             model.Skip("lethal", "the board after the play: its search stopped at a cap or met something not modelled");
             return;
         }
+        // Your pick inside the play took a card the simulation follows (decision #167: the pick is yours): the board it left isn't the play's to
+        // hold the chances to (True Grit+ exhausting Howl from Beyond, which kills as your turn ends).
+        if (PickTookAFollowedCard(window) is { } picked)
+        {
+            model.Skip("lethal", "your pick inside the play took a card the simulation follows (decision #167: the pick is yours)", picked);
+            return;
+        }
         foreach (var (creature, id) in sim.Ids)
         {
             if (!card.TryGetValue(id, out var chance) || sim.Start.Enemy(id) is not { Hp: > 0 } start) continue;
@@ -169,7 +176,8 @@ public sealed partial class ProcAudit
         // A choice inside the play is yours (decision #167): the prediction took a card that doesn't act when exhausted. Your pick
         // exhausting one that does (Drum of Battle's energy) made a state the prediction left to your choice: not checked.
         if (SimAdapter.ExhaustPickOf(window.Card) is { Pick: ExhaustPick.Chosen }
-            && entries.OfType<CardExhaustedEntry>().Any(exhausted => !ReferenceEquals(exhausted.Card, window.Card) && CardEnergy.WhenExhausted(exhausted.Card) > 0))
+            && entries.OfType<CardExhaustedEntry>().Any(exhausted => !ReferenceEquals(exhausted.Card, window.Card)
+                && (CardEnergy.WhenExhausted(exhausted.Card) > 0 || SimAdapter.PlaysFromExhaustPile(exhausted.Card))))
         {
             model.Skip("state after the play", "your pick inside the play exhausted a card that acts when exhausted");
             return;

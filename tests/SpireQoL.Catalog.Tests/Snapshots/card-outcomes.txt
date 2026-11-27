@@ -2836,11 +2836,11 @@ PunchOfJoy [Crowded] 1 you=80/0 e1 h9 d0/4 enemy0=186/0 enemy1=30/0 []
 PunchOfJoy [Replayed] 1 you=80/0 e1 h3 d6/4 enemy0=172/0 []
 PunchOfJoy [Teammate] 1 you=80/0 e1 h3 d6/4 mate0=70/0 e3 h2 enemy0=186/0 []
 PunchOfJoy [Alone] 1 you=80/0 e1 h0 d6/4 enemy0=186/0 []
-Purity [Standard] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted4] ?it takes cards from your hand, and the cards the simulation follows there may be all it can take
-Purity [Upgraded] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted4] ?it takes cards from your hand, and the cards the simulation follows there may be all it can take
-Purity [Crowded] 1 you=80/0 e3 h6 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted4]
-Purity [Replayed] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted1] ?it takes cards from your hand, and the cards the simulation follows there may be all it can take
-Purity [Teammate] 1 you=80/0 e3 h0 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted4] ?it takes cards from your hand, and the cards the simulation follows there may be all it can take
+Purity [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1] ?you choose how many cards it takes from your hand
+Purity [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1] ?you choose how many cards it takes from your hand
+Purity [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1] ?you choose how many cards it takes from your hand
+Purity [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1] ?you choose how many cards it takes from your hand
+Purity [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1] ?you choose how many cards it takes from your hand
 Purity [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted1]
 Putrefy [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 Putrefy [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]

@@ -85,7 +85,8 @@ public sealed partial class ProcAudit
     }
 
     /// <summary>
-    /// A card the simulator follows in your hand (one that acts there as the turn ends, an Ethereal one, one that acts when exhausted) that your pick
+    /// A card the simulator follows in your hand (one that acts there as the turn ends, an Ethereal one, one that acts when exhausted, one that plays
+    /// from your exhaust pile once exhausted) that your pick
     /// inside the play took (CardSelectCmd.FromHand: Begone's transform, an exhaust you choose), by name; null when there's none. The play's
     /// simulation takes a card that changes nothing it follows (SimEngine.RunLeaveHand, decision #167), so the board your pick left isn't the
     /// preview's to match: BEGONE! on an Infection left its 3 out of the turn the preview showed.
@@ -97,7 +98,9 @@ public sealed partial class ProcAudit
         {
             if (before.Pile != MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand || ReferenceEquals(card, window.Card)) continue;
             if (window.FullAfter.Cards.TryGetValue(card, out var after) && after.Pile == MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand) continue;
-            var followed = SimEngine.HandAtTurnEnd.ContainsKey(card.GetType().Name) || CardEnergy.WhenExhausted(card) > 0
+            // Or one that, exhausted, plays itself from your exhaust pile as the turn ends (Howl from Beyond: True Grit+ choosing it).
+            var exhaustPlays = SimAdapter.PlaysFromExhaustPile(card) && window.FullAfter.Cards.TryGetValue(card, out var moved) && moved.Pile == MegaCrit.Sts2.Core.Entities.Cards.PileType.Exhaust;
+            var followed = SimEngine.HandAtTurnEnd.ContainsKey(card.GetType().Name) || CardEnergy.WhenExhausted(card) > 0 || exhaustPlays
                            || card.Keywords.Contains(MegaCrit.Sts2.Core.Entities.Cards.CardKeyword.Ethereal);
             if (followed) return SafeTitle(card);
         }

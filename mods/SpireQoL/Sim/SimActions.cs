@@ -405,6 +405,12 @@ public sealed record TakeFromHandAction(HandTakeWay Way) : SimAction
     public bool Leaves { get; init; } = true;
     /// <summary>From the owner's draw pile instead of the hand (Cleanse): the pick is a card of the pile (decision #188).</summary>
     public bool FromDrawPile { get; init; }
+    /// <summary>
+    /// You choose how many it takes (a selector whose least and most differ: Ashwater's 0 to any, Purity's up to 3, Gambler's Brew's discard): how many is
+    /// your later decision (decision #406), so with a card it could take, what follows from it is unknown.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ChoosesHowMany { get; init; }
     /// <summary>What the play does after each card it takes, before the next (the take's loop's other commands).</summary>
     public IReadOnlyList<SimAction> EachCard { get; init; } = Array.Empty<SimAction>();
     /// <summary>

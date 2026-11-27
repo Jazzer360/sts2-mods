@@ -2072,14 +2072,14 @@ public static partial class SimAdapter
             {
                 case CardEffects.TakeWay.Picked when take.PickPile is PileType.Draw:
                     if (cardEvent == CardEvent.Exhausted)
-                        actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Count(take.PerPick), Matching = BoardCounts.ExhaustOthers(model, new List<CardModel>(), DrawPileOf(model)) });
+                        actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Count(take.PerPick), ChoosesHowMany = take.ChoosesHowMany, Matching = BoardCounts.ExhaustOthers(model, new List<CardModel>(), DrawPileOf(model)) });
                     break;
                 case CardEffects.TakeWay.Picked when take.PickPile is null or PileType.Hand:
                 {
                     var filtered = !take.ItemTest.IsAlways || eventIfNot != null;
                     actions.Add(new TakeFromHandAction(HandTakeWay.Pick)
                     {
-                        Event = cardEvent, Made = made, EventIfNot = eventIfNot, Leaves = leaves, Most = Count(take.PerPick),
+                        Event = cardEvent, Made = made, EventIfNot = eventIfNot, Leaves = leaves, Most = Count(take.PerPick), ChoosesHowMany = take.ChoosesHowMany,
                         Filter = filtered ? key : null, Matching = filtered ? BoardCounts.MatchingAtStart(model, take, everyPile: false) : 0,
                     });
                     break;

@@ -221,11 +221,10 @@ public class PotionUseTests
     }
 
     [Fact]
-    public void APickOfHowManyToDiscardTakesTheMostAsACardsDoesAndDrawsAsManyAsItDiscarded()
+    public void APickOfAFixedSizeToDiscardTakesItsMostAndDrawsAsManyAsItDiscarded()
     {
-        // Gambler's Brew: CardSelectCmd.FromHandForDiscard(0 to any), then CardCmd.DiscardAndDraw(the cards picked, their count): a pick of up to
-        // any is the card translation's (Purity's up to 3): the most it can take, each a Discarded event; then it draws what it discarded (the
-        // cards the take took, read as it runs), so your hand keeps its size.
+        // A pick of a fixed size (CardSelectorPrefs with one count): its most of the cards it can take, each a Discarded event; then a draw of what it
+        // discarded (the cards the take took, read as it runs), so your hand keeps its size. (Gambler's Brew chooses how many: the next test.)
         var state = Fight();
         state.You.HandCount = 2;
         state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 5) } };
@@ -236,6 +235,23 @@ public class PotionUseTests
         var branch = Assert.Single(after);
         Assert.Equal(2, branch.You.HandCount);
         Assert.Equal(3, branch.You.Draw!.Count);
+    }
+
+    [Fact]
+    public void APickOfHowManyIsYourLaterDecisionWhenItCouldTakeACard()
+    {
+        // A dev review report: Ashwater (CardSelectCmd.FromHand, 0 to any, each exhausted) was predicted to exhaust your whole hand (27 block from
+        // Feel No Pain); you exhausted fewer. How many is your later decision (decision #406): unknown, with a card it could take; none to take, none.
+        var state = Fight();
+        state.You.HandCount = 2;
+        var play = Potion("Ashwater", Who.You, new TakeFromHandAction(HandTakeWay.Pick) { Event = CardEvent.Exhausted, Most = 999999999, ChoosesHowMany = true });
+        SimEngine.ApplyPlayTo(state, play, out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.NotNull(branch.Unmodelled);
+        Assert.Equal(2, branch.You.HandCount);
+        state.You.HandCount = 0;
+        SimEngine.ApplyPlayTo(state, play, out var empty, out _);
+        Assert.Null(Assert.Single(empty).Unmodelled);
     }
 
     [Fact]

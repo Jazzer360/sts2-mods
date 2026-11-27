@@ -76,6 +76,46 @@ public class DevReviewAdapterTests
     }
 
     [Fact]
+    public void AshwaterLeavesHowManyItExhaustsToYou()
+    {
+        // The owner's Ironclad run: Ashwater exhausts the cards you pick from your hand, 0 to any (CardSelectorPrefs(prompt, 0, 999999999)). How many
+        // is your later decision (decision #406): with cards in your hand, its outcome is unknown, never your whole hand exhausted.
+        GameModels.EnsureLoaded();
+        var fight = new GameFight();
+        fight.Add<DefendIronclad>();
+        fight.Add<StrikeIronclad>();
+        var potion = ModelDb.Potion<MegaCrit.Sts2.Core.Models.Potions.Ashwater>().ToMutable();
+        fight.Me.AddPotionInternal(potion);
+        var start = SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        var use = SimAdapter.Potion(potion, fight.Me, fight.Combat, ids, Who.You);
+        Assert.Contains(use.Body.OfType<TakeFromHandAction>(), take => take.ChoosesHowMany);
+        SimEngine.ApplyPlayTo(start, use, out var branches, out _);
+        Assert.All(branches, branch => Assert.NotNull(branch.Unmodelled));
+    }
+
+    [Fact]
+    public void PurityLeavesHowManyItExhaustsToYou()
+    {
+        // Purity: exhaust up to 3 cards you pick (0 to 3): the same later decision.
+        var fight = new GameFight();
+        var purity = fight.Add<Purity>();
+        fight.Add<DefendIronclad>();
+        SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        var play = SimAdapter.Play(purity, fight.Me, fight.Combat, ids, targetId: Who.None);
+        Assert.Contains(play.Body.OfType<TakeFromHandAction>(), take => take.ChoosesHowMany);
+    }
+
+    [Fact]
+    public void HowlFromBeyondPlaysFromYourExhaustPile()
+    {
+        // True Grit+ exhausting Howl from Beyond: the play audit's pick check (decision #167) counts a card that plays from your exhaust pile as one the
+        // simulation follows, as the board read does (SimAdapter.FillAutoPlays).
+        GameModels.EnsureLoaded();
+        Assert.True(SimAdapter.PlaysFromExhaustPile(ModelDb.Card<HowlFromBeyond>()));
+        Assert.False(SimAdapter.PlaysFromExhaustPile(ModelDb.Card<TrueGrit>()));
+    }
+
+    [Fact]
     public void ClawCarriesItsGrowthForAReplayTheSimulatorDecides()
     {
         // Echo Form's replay is decided as the play starts (CardPlayAction.CountByModels), so the play read now has one play: Claw's growth (its Increase

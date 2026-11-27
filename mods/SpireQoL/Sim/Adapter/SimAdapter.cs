@@ -420,7 +420,7 @@ public static partial class SimAdapter
             }
             foreach (var card in PileType.Exhaust.GetPile(me).Cards)
             {
-                if (card is HowlFromBeyond) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, target: Who.None, owner: owner));
+                if (PlaysFromExhaustPile(card)) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, target: Who.None, owner: owner));
             }
             var drawPile = PileType.Draw.GetPile(me).Cards;
             if (drawPile.Count > 0 && drawPile.All(card => card is IAmInvincible))
@@ -437,6 +437,9 @@ public static partial class SimAdapter
             player.PileAutoPlays = null; // a card's auto-play of your piles' cards is unknown then (AutoPlayCardsAction: not read)
         }
     }
+
+    /// <summary>A card that plays itself from its owner's exhaust pile as the turn ends (Howl from Beyond's AfterAutoPostPlayPhaseEntered): exhausted, it acts.</summary>
+    internal static bool PlaysFromExhaustPile(CardModel card) => card is HowlFromBeyond;
 
     /// <summary>The end-of-turn auto-plays a card in the hand gives as it plays (PowerCmd.Apply of StampedePower or SimpletonPower in its OnPlay).</summary>
     private static (bool Stampede, bool Simpleton) GivenFromHand(Player me)
