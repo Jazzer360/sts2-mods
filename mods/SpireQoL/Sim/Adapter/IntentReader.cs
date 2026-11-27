@@ -45,7 +45,7 @@ internal static class IntentReader
                 MoveNode? node = state switch
                 {
                     MoveState moveState => Node(moveState),
-                    RandomBranchState randomBranchState => new MoveNodeRandom(id, randomBranchState.States.Select(Branch).ToList()),
+                    RandomBranchState randomBranchState => new MoveNodeRandom(id, randomBranchState.States.Select(stateWeight => Branch(stateWeight, monster)).ToList()),
                     ConditionalBranchState conditionalBranchState => new MoveNodeConditional(id, Conditions(conditionalBranchState))
                     {
                         Conditions = monster == null ? null : MoveConditions.BranchesOf(conditionalBranchState).Select(branch => MoveConditions.Of(monster, branch.Lambda)).ToList(),
@@ -82,7 +82,11 @@ internal static class IntentReader
 
     private static MoveNodeMove Node(MoveState moveState) => new(moveState.Id, moveState.FollowUpState?.Id ?? moveState.FollowUpStateId);
 
-    private static RandomBranch Branch(RandomBranchState.StateWeight stateWeight)
+    /// <summary>
+    /// A random branch as the pure model: its weight as its lambda gives it now, and with <paramref name="monster"/> that lambda's code as the
+    /// simulator's (decision #411: MoveConditions.WeightWays), for asking a simulated state.
+    /// </summary>
+    private static RandomBranch Branch(RandomBranchState.StateWeight stateWeight, MonsterModel? monster)
     {
         var repeat = stateWeight.repeatType switch
         {
@@ -93,7 +97,10 @@ internal static class IntentReader
         };
         float weight;
         try { weight = stateWeight.GetWeight(); } catch { weight = float.NaN; } // its lambda can't answer now: only matters if reached
-        return new RandomBranch(stateWeight.stateId, repeat, stateWeight.maxTimes, stateWeight.cooldown, weight);
+        return new RandomBranch(stateWeight.stateId, repeat, stateWeight.maxTimes, stateWeight.cooldown, weight)
+        {
+            Ways = monster == null ? null : MoveConditions.WeightWays(monster, stateWeight.weightLambda),
+        };
     }
 
     /// <summary>Each branch of a conditional state with whether its condition holds now (ConditionalBranch.Evaluate).</summary>

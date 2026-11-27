@@ -63,8 +63,8 @@ public class ConditionalBranchTests
 
     /// <summary>
     /// The enemies as the adapter reads what a branch asks of them (SimAdapter.Build: their HP, alive or not, and their powers through
-    /// SimReaders.Powers), without the rest of the board: Build reads a monster's title, which for some (Test Subject's kill count) reads the
-    /// player's save, not there outside the game.
+    /// SimReaders.Powers, and the numbers of its own its rules ask, MoveConditions.CounterFields: decision #411), without the rest of the board:
+    /// Build reads a monster's title, which for some (Test Subject's kill count) reads the player's save, not there outside the game.
     /// </summary>
     private static (SimState State, Dictionary<Creature, int> Ids) Enemies(GameFight fight)
     {
@@ -72,7 +72,11 @@ public class ConditionalBranchTests
         var state = new SimState();
         foreach (var enemy in fight.Combat.Enemies) ids[enemy] = ids.Count;
         foreach (var (enemy, id) in ids)
-            state.Enemies.Add(new SimEnemy { Id = id, Hp = enemy.IsAlive ? enemy.CurrentHp : 0, Powers = SimReaders.Powers(enemy, creature => ids.TryGetValue(creature, out var known) ? known : null) });
+            state.Enemies.Add(new SimEnemy
+            {
+                Id = id, Hp = enemy.IsAlive ? enemy.CurrentHp : 0, Powers = SimReaders.Powers(enemy, creature => ids.TryGetValue(creature, out var known) ? known : null),
+                Fields = enemy.Monster is { } monster ? MoveConditions.CounterFields(monster, NamedSet<string>.Empty) : NamedSet<string>.Empty,
+            });
         return (state, ids);
     }
 

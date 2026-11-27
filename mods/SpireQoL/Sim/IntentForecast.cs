@@ -10,7 +10,14 @@ public abstract record MoveNode(string Id);
 public sealed record MoveNodeMove(string Id, string? FollowUp) : MoveNode(Id);
 
 /// <summary>One branch of a random pick (RandomBranchState.StateWeight); Weight is its weight now (NaN: it couldn't be read).</summary>
-public sealed record RandomBranch(string To, MoveRepeat Repeat, int MaxTimes, int Cooldown, float Weight);
+public sealed record RandomBranch(string To, MoveRepeat Repeat, int MaxTimes, int Cooldown, float Weight)
+{
+    /// <summary>
+    /// Its weight lambda's code as the simulator's (decision #411: MoveConditions.WeightWays), each way's condition and the weight it returns, for asking a
+    /// simulated state (Two-Tailed Rat's 1/12 once it can summon, which its own moves count towards); null where it isn't read: Weight, as read now.
+    /// </summary>
+    public IReadOnlyList<(SimCondition When, double Weight)>? Ways { get; init; }
+}
 
 /// <summary>A random pick (RandomBranchState).</summary>
 public sealed record MoveNodeRandom(string Id, IReadOnlyList<RandomBranch> Branches) : MoveNode(Id);
@@ -60,7 +67,7 @@ public static class IntentForecast
         for (var turn = 0; turn < maxTurns; turn++)
         {
             var dist = new Dictionary<string, double>();
-            if (!Walk(graph, move.FollowUp ?? graph.InitialId, chance: 1.0, history, dist, depth: 0, AsReadNow)) break;
+            if (!Walk(graph, move.FollowUp ?? graph.InitialId, chance: 1.0, history, dist, depth: 0, AsReadNow, WeightNow)) break;
             var moves = dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key)
                 .Select(entry => (entry.Key, entry.Value)).ToList();
             if (moves.Count == 0) break;
@@ -76,6 +83,44 @@ public static class IntentForecast
     /// <summary>A conditional branch's condition as the game's lambda answered it when the rules were read.</summary>
     private static bool? AsReadNow(MoveNodeConditional node, int branch) => node.Branches[branch].Holds;
 
+    /// <summary>A random branch's weight as the game's lambda gave it when the rules were read.</summary>
+    private static double WeightNow(RandomBranch branch) => branch.Weight;
+
+    /// <summary>
+    /// A random branch's weight asked of a simulated state as the enemy <paramref name="enemyId"/> (decision #411): the weight of the first of its ways
+    /// whose condition holds, NaN (not known) where one before it can't be told; as read now where its code isn't read.
+    /// </summary>
+    private static Func<RandomBranch, double> WeightOf(SimState state, int enemyId) => branch =>
+    {
+        if (branch.Ways is not { } ways) return branch.Weight;
+        foreach (var (when, weight) in ways)
+            switch (SimEngine.Holds(state, when, enemyId))
+            {
+                case true: return weight;
+                case null: return double.NaN;
+            }
+        return double.NaN; // its code returns on one of them: none holding is a condition the simulator reads otherwise
+    };
+
+    /// <summary>A random branch's weight asked of a simulated state as the enemy <paramref name="enemyId"/> (WeightOf): NaN where it can't be told.</summary>
+    public static double WeightAsked(RandomBranch branch, SimState state, int enemyId) => WeightOf(state, enemyId)(branch);
+
+    /// <summary>Some random branch's weight in the rules is read from its code (decision #411): asked of a state, never as read now.</summary>
+    public static bool AsksTheState(MoveGraph graph) => graph.Nodes.Values.Any(node => node is MoveNodeRandom random && random.Branches.Any(branch => branch.Ways != null));
+
+    /// <summary>Some random branch's weight in the rules asks its teammates' next moves (decision #411: SimCounted.SideNextMove).</summary>
+    public static bool AsksTeammatesMoves(MoveGraph graph) => graph.Nodes.Values.Any(node => node is MoveNodeRandom random
+        && random.Branches.Any(branch => branch.Ways?.Any(way => Asks(way.When, SimCounted.SideNextMove)) == true));
+
+    private static bool Asks(SimCondition condition, SimCounted counted) => condition switch
+    {
+        CountCondition count => count.Counted == counted,
+        NotCondition not => Asks(not.Inner, counted),
+        AllCondition all => all.Parts.Any(part => Asks(part, counted)),
+        AnyCondition any => any.Parts.Any(part => Asks(part, counted)),
+        _ => false,
+    };
+
     /// <summary>
     /// The moves an enemy can make after the move <paramref name="moveId"/>, each with its chance, its conditional branches asked of the
     /// simulated <paramref name="state"/> as the enemy <paramref name="enemyId"/> (decision #195: SimCondition, the simulator's own HP, powers
@@ -83,14 +128,14 @@ public static class IntentForecast
     /// with no condition read). <paramref name="log"/>: the moves it was given this fight, that one last.
     /// </summary>
     public static IReadOnlyList<(string Move, double Chance)>? NextOn(MoveGraph graph, string moveId, IReadOnlyList<string> log, SimState state, int enemyId) =>
-        graph.Nodes.GetValueOrDefault(moveId) is not MoveNodeMove move ? null : Next(graph, move.FollowUp ?? graph.InitialId, log, AskedOf(state, enemyId, readNowWhereNot: false));
+        graph.Nodes.GetValueOrDefault(moveId) is not MoveNodeMove move ? null : Next(graph, move.FollowUp ?? graph.InitialId, log, AskedOf(state, enemyId, readNowWhereNot: false), WeightOf(state, enemyId));
 
     /// <summary>
     /// The moves an enemy can make from the state <paramref name="stateId"/> (a stun's follow-up: CreatureCmd.Stun's nextMoveId, a move or a branch),
     /// each with its chance, its conditional branches asked of the simulated <paramref name="state"/> as NextOn does. Null when the rules can't say.
     /// </summary>
     public static IReadOnlyList<(string Move, double Chance)>? NextFrom(MoveGraph graph, string stateId, IReadOnlyList<string> log, SimState state, int enemyId) =>
-        Next(graph, stateId, log, AskedOf(state, enemyId, readNowWhereNot: false));
+        Next(graph, stateId, log, AskedOf(state, enemyId, readNowWhereNot: false), WeightOf(state, enemyId));
 
     /// <summary>
     /// The moves an enemy can make from the state <paramref name="stateId"/> in a projected turn (decision #309), each with its chance: a conditional
@@ -99,13 +144,14 @@ public static class IntentForecast
     /// with no state (past what the projection follows). Null when the rules can't say.
     /// </summary>
     public static IReadOnlyList<(string Move, double Chance)>? NextInProjection(MoveGraph graph, string stateId, IReadOnlyList<string> log, SimState? state, int enemyId) =>
-        Next(graph, stateId, log, state == null ? AsReadNow : AskedOf(state, enemyId, readNowWhereNot: true));
+        Next(graph, stateId, log, state == null ? AsReadNow : AskedOf(state, enemyId, readNowWhereNot: true), state == null ? WeightNow : WeightOf(state, enemyId));
 
     /// <summary>The moves reached from <paramref name="stateId"/>, each with its chance, its conditions asked by <paramref name="holdsOf"/>; null when the rules can't say.</summary>
-    private static IReadOnlyList<(string Move, double Chance)>? Next(MoveGraph graph, string stateId, IReadOnlyList<string> log, Func<MoveNodeConditional, int, bool?> holdsOf)
+    private static IReadOnlyList<(string Move, double Chance)>? Next(MoveGraph graph, string stateId, IReadOnlyList<string> log, Func<MoveNodeConditional, int, bool?> holdsOf,
+        Func<RandomBranch, double> weightOf)
     {
         var dist = new Dictionary<string, double>();
-        if (!Walk(graph, stateId, chance: 1.0, log.ToList(), dist, depth: 0, holdsOf)) return null;
+        if (!Walk(graph, stateId, chance: 1.0, log.ToList(), dist, depth: 0, holdsOf, weightOf)) return null;
         return dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key).Select(entry => (entry.Key, entry.Value)).ToList();
     }
 
@@ -120,7 +166,7 @@ public static class IntentForecast
 
     /// <summary>Spreads <paramref name="chance"/> over the moves reached from a state; false when the rules can't say.</summary>
     private static bool Walk(MoveGraph graph, string id, double chance, List<string> log, Dictionary<string, double> into, int depth,
-        Func<MoveNodeConditional, int, bool?> holdsOf)
+        Func<MoveNodeConditional, int, bool?> holdsOf, Func<RandomBranch, double> weightOf)
     {
         if (depth > MaxDepth || !graph.Nodes.TryGetValue(id, out var node)) return false;
         switch (node)
@@ -130,12 +176,12 @@ public static class IntentForecast
                 return true;
             case MoveNodeRandom moveNodeRandom:
             {
-                var weights = moveNodeRandom.Branches.Select(randomBranch => Weight(randomBranch, log)).ToList();
+                var weights = moveNodeRandom.Branches.Select(randomBranch => Weight(randomBranch, log, weightOf)).ToList();
                 if (weights.Any(double.IsNaN)) return false; // a weight that couldn't be read
                 var total = weights.Sum();
                 if (total <= 0) return false; // the game throws: no valid state
                 for (var i = 0; i < moveNodeRandom.Branches.Count; i++)
-                    if (weights[i] > 0 && !Walk(graph, moveNodeRandom.Branches[i].To, chance * weights[i] / total, log, into, depth + 1, holdsOf)) return false;
+                    if (weights[i] > 0 && !Walk(graph, moveNodeRandom.Branches[i].To, chance * weights[i] / total, log, into, depth + 1, holdsOf, weightOf)) return false;
                 return true;
             }
             case MoveNodeConditional moveNodeConditional:
@@ -144,7 +190,7 @@ public static class IntentForecast
                 {
                     var holds = holdsOf(moveNodeConditional, branch);
                     if (holds == null) return false; // a condition that couldn't be read, before the one that holds
-                    if (holds.Value) return Walk(graph, moveNodeConditional.Branches[branch].To, chance, log, into, depth + 1, holdsOf);
+                    if (holds.Value) return Walk(graph, moveNodeConditional.Branches[branch].To, chance, log, into, depth + 1, holdsOf, weightOf);
                 }
                 return false; // the game throws: no valid next state
             }
@@ -154,7 +200,13 @@ public static class IntentForecast
     }
 
     /// <summary>A branch's weight now (RandomBranchState.GetStateWeight, line for line).</summary>
-    internal static double Weight(RandomBranch randomBranch, IReadOnlyList<string> log)
+    internal static double Weight(RandomBranch randomBranch, IReadOnlyList<string> log) => Weight(randomBranch, log, WeightNow);
+
+    /// <summary>
+    /// A branch's weight (RandomBranchState.GetStateWeight, line for line), its lambda's as <paramref name="weightOf"/> gives it: 0 by its repeat rule
+    /// whatever that is (a weight not known on a branch that can't be picked changes nothing).
+    /// </summary>
+    internal static double Weight(RandomBranch randomBranch, IReadOnlyList<string> log, Func<RandomBranch, double> weightOf)
     {
         double num = 1;
         if (randomBranch.Repeat == MoveRepeat.UseOnlyOnce)
@@ -177,6 +229,6 @@ public static class IntentForecast
             }
         }
         if (randomBranch.Cooldown > 0 && log.Reverse().Take(randomBranch.Cooldown).Contains(randomBranch.To)) return 0;
-        return num * randomBranch.Weight;
+        return num == 0 ? 0 : num * weightOf(randomBranch);
     }
 }

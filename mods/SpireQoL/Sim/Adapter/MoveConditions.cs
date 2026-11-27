@@ -67,8 +67,15 @@ internal static class MoveConditions
             foreach (var owner in new[] { monster }.Concat(monster.GetNestedTypes(BindingFlags.NonPublic)))
                 foreach (var method in owner.GetMethods(declared))
                 {
-                    if (method.ReturnType != typeof(bool) || method.GetParameters().Length != 0 || method.IsGenericMethodDefinition
-                        || !method.Name.StartsWith("<GenerateMoveStateMachine>", StringComparison.Ordinal)) continue;
+                    if (method.GetParameters().Length != 0 || method.IsGenericMethodDefinition || !method.Name.StartsWith("<GenerateMoveStateMachine>", StringComparison.Ordinal)) continue;
+                    if (method.ReturnType == typeof(float))
+                    {
+                        // A random branch's weight (decision #411).
+                        try { Weights.GetOrAdd(method, lambda => ProgramReader.ReadReturnedWays(monster, lambda, RuntimeCode.Read)); read++; }
+                        catch { /* read on the fight's ask instead */ }
+                        continue;
+                    }
+                    if (method.ReturnType != typeof(bool)) continue;
                     try
                     {
                         var condition = Read.GetOrAdd(method, lambda => ProgramReader.ReadReturned(monster, lambda, RuntimeCode.Read));
@@ -139,6 +146,21 @@ internal static class MoveConditions
             // x == 0 of a true-or-false (the code's !x).
             case CompareValue { Op: Comparison.Equal or Comparison.NotEqual, Right: ConstantValue { Value: 0 } } flag when IsTrueOrFalse(flag.Left, monster, owner):
                 return Test(flag.Left, monster, owner, depth, ownState) is { } inner ? flag.Op == Comparison.Equal ? new NotCondition(inner) : inner : null;
+            // A number of its own its moves count (decision #411: Two-Tailed Rat's TurnsUntilSummonable <= 0, CallForBackupCount < 3), in its fields.
+            case CompareValue compare when CounterKey(owner, compare.Left) is { } counter && Number(compare.Right, monster) is { } limit:
+                return new CountCondition(SimCounted.MonsterCounter, Compared(compare.Op), Than: limit) { Field = counter };
+            case CompareValue compare when CounterKey(owner, compare.Right) is { } counter && Number(compare.Left, monster) is { } limit:
+                return new CountCondition(SimCounted.MonsterCounter, Compared(Swapped(compare.Op)), Than: limit) { Field = counter };
+            // A true-or-false method of its own with no arguments (Two-Tailed Rat's CanSummon): what its code returns.
+            case QueryValue { IsProperty: false, Of: NamedValue { Name: "this" }, Arguments.Count: 0, ValueType: nameof(Boolean) } call when depth < 2
+                && OwnMethodCode(owner, call.Name) is { } body && Translate(body, monster, owner, depth + 1, ownState) is { } returned:
+                return returned;
+            // No slot of the encounter free (string.IsNullOrEmpty(Encounter?.GetNextSlot(CombatState)): Two-Tailed Rat's room to call for backup).
+            case QueryValue { Type: "String", Name: "IsNullOrEmpty", Arguments: [var slot] } when slot.Parts().Any(part => part is QueryValue { Name: "GetNextSlot" }):
+                return new CountCondition(SimCounted.FreeSlots, SimCompare.Equal, Than: 0);
+            // A teammate whose next move is one of its (Any of its side's creatures but itself, c.Monster.NextMove.Id.Equals("CALL_FOR_BACKUP_MOVE")).
+            case QueryValue { Type: "Enumerable", Name: "Any", Arguments: [var items, LambdaValue lambda] } when Teammates(items) is { } excludingItself && NextMoveTested(lambda) is { } move:
+                return new CountCondition(SimCounted.SideNextMove, SimCompare.Greater, Than: 0) { Move = move, ExcludingItself = excludingItself };
             case CompareValue compare when Counted(compare.Left) is { } counted && Number(compare.Right, monster) is { } than:
                 return counted with { Compare = Compared(compare.Op), Than = than };
             case CompareValue compare when Counted(compare.Right) is { } counted && Number(compare.Left, monster) is { } than:
@@ -201,6 +223,144 @@ internal static class MoveConditions
             if (counted.Field is not { } field) continue;
             var name = field[(field.LastIndexOf('.') + 1)..];
             if (monster.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public)?.GetValue(monster) is bool holds) fields = fields.With(field, holds ? 1 : 0);
+        }
+        return fields;
+    }
+
+    /// <summary>A monster's own true-or-false methods' code (CanSummon), each read once; null where it has none of that name.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Owner, string Name), ProgramCondition?> Methods = new();
+
+    private static ProgramCondition? OwnMethodCode(Type owner, string name) =>
+        Methods.GetOrAdd((owner, name), key => OwnMethod(key.Owner, key.Name) is { } method ? ProgramReader.ReadReturned(key.Owner, method, RuntimeCode.Read) : null);
+
+    private static MethodInfo? OwnMethod(Type owner, string name)
+    {
+        for (var type = owner; type != null && type != typeof(MonsterModel); type = type.BaseType)
+            if (type.GetMethod(name, Any | BindingFlags.DeclaredOnly, Type.EmptyTypes) is { } method && method.ReturnType == typeof(bool)) return method;
+        return null;
+    }
+
+    /// <summary>
+    /// A number of the monster's own (an int property with a setter: this.TurnsUntilSummonable) as its key in an enemy's fields
+    /// ("Monster.TwoTailedRat.TurnsUntilSummonable": the class declaring it), or null for anything else.
+    /// </summary>
+    internal static string? CounterKey(Type owner, ProgramValue value)
+    {
+        if (value is not QueryValue { IsProperty: true, Of: NamedValue { Name: "this" }, Name: var name }) return null;
+        return owner.GetProperty(name, Any) is { PropertyType: var type, CanWrite: true, DeclaringType: { } declaring } && type == typeof(int)
+            ? ProgramReader.OwnersMonsterPrefix + declaring.Name + "." + name : null;
+    }
+
+    /// <summary>
+    /// The numbers of its own a monster class's move rules ask (decision #411: its conditional branches' and its random branches' weights' lambdas, and
+    /// the true-or-false methods and properties of its own they call, two deep), by their keys: what the adapter seeds an enemy's fields with and its
+    /// moves' stores keep. Read once per class.
+    /// </summary>
+    internal static IReadOnlySet<string> CounterKeys(Type monster) => Counters.GetOrAdd(monster, type =>
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        const BindingFlags declared = Any | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        void Walk(IEnumerable<ProgramValue> parts, int depth)
+        {
+            foreach (var part in parts)
+            {
+                if (CounterKey(type, part) is { } key) keys.Add(key);
+                if (depth >= 2 || part is not QueryValue { Of: NamedValue { Name: "this" } } own) continue;
+                var called = own.IsProperty
+                    ? Getters.GetOrAdd((type, own.Name), getter => ProgramReader.ReadProperty(getter.Owner, getter.Name, RuntimeCode.Read))
+                    : own.Arguments.Count == 0 ? OwnMethodCode(type, own.Name) : null;
+                if (called != null) Walk(called.Literals.SelectMany(literal => literal.Test.Parts()).ToList(), depth + 1);
+            }
+        }
+        try
+        {
+            foreach (var holder in new[] { type }.Concat(type.GetNestedTypes(BindingFlags.NonPublic)))
+                foreach (var method in holder.GetMethods(declared))
+                {
+                    if (method.GetParameters().Length != 0 || method.IsGenericMethodDefinition || !method.Name.StartsWith("<GenerateMoveStateMachine>", StringComparison.Ordinal)) continue;
+                    if (method.ReturnType == typeof(bool))
+                        Walk(Read.GetOrAdd(method, lambda => ProgramReader.ReadReturned(type, lambda, RuntimeCode.Read)).Literals.SelectMany(literal => literal.Test.Parts()).ToList(), depth: 0);
+                    else if (method.ReturnType == typeof(float))
+                        Walk(Weights.GetOrAdd(method, lambda => ProgramReader.ReadReturnedWays(type, lambda, RuntimeCode.Read)).Parts().ToList(), depth: 0);
+                }
+        }
+        catch
+        {
+            // a lambda that can't be read: what it asks isn't followed
+        }
+        return keys;
+    });
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlySet<string>> Counters = new();
+
+    /// <summary>Each random branch's weight lambda's code, read once (decision #411).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<MethodInfo, WaysValue> Weights = new();
+
+    /// <summary>
+    /// A random branch's weight lambda (RandomBranchState.StateWeight.weightLambda) as the simulator's (decision #411): each way its code returns, the
+    /// condition it's reached on as the simulator's and the number it returns (Two-Tailed Rat's 1 while it can't summon, 1/12 when it can). Null when
+    /// a way's weight isn't a number the code holds (a weight kept in a closure: AddBranch's constant), a condition can't be translated, or every
+    /// condition is decided now: the weight is as the game's lambda gives it now.
+    /// </summary>
+    internal static IReadOnlyList<(SimCondition When, double Weight)>? WeightWays(MonsterModel monster, Delegate? lambda)
+    {
+        if (lambda == null) return null;
+        try
+        {
+            var owner = monster.GetType();
+            var ways = Weights.GetOrAdd(lambda.Method, method => ProgramReader.ReadReturnedWays(owner, method, RuntimeCode.Read));
+            var read = new List<(SimCondition When, double Weight)>();
+            foreach (var (when, value) in ways.Ways)
+            {
+                double? weight = value switch { ConstantValue constant => constant.Value, RealValue real => real.Value, _ => null };
+                if (weight == null || Translate(when, monster, owner, depth: 0) is not { } condition) return null;
+                read.Add((condition, weight.Value));
+            }
+            return read.Count == 0 || read.All(way => way.When is KnownCondition) ? null : read;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Its side's creatures as a lambda goes over them: GetTeammatesOf(this.Creature) (false), or Where(that, c =&gt; c != this.Creature) (true: without
+    /// itself), a ToList of either, or one kept in a local; null for anything else.
+    /// </summary>
+    private static bool? Teammates(ProgramValue items)
+    {
+        if (items is StoredValue kept) items = kept.Value; // kept in a local first (CanSummon's list)
+        if (items is QueryValue { Name: "ToList", Arguments: [var listed] }) items = listed;
+        if (items is QueryValue { Name: "GetTeammatesOf", Arguments: [var whose] } && IsItsCreature(whose)) return false;
+        if (items is not QueryValue { Name: "Where", Arguments: [QueryValue { Name: "GetTeammatesOf", Arguments: [var side] }, LambdaValue filter] } || !IsItsCreature(side)) return null;
+        var literals = filter.Body.Terms.Count == 1 ? filter.Body.Terms[0] : null;
+        return literals is [{ Test: CompareValue { Op: Comparison.NotEqual } other, Holds: true }] && IsItsCreature(other.Right) ? true : null;
+    }
+
+    /// <summary>The move id a lambda compares its creature's next move with (c.Monster.NextMove.Id.Equals("X"), or ==), or null.</summary>
+    private static string? NextMoveTested(LambdaValue lambda)
+    {
+        if (lambda.Body.Terms.Count != 1 || lambda.Body.Terms[0] is not [{ Holds: true, Test: var test }]) return null;
+        static bool IsNextMoveId(ProgramValue? value) =>
+            value is QueryValue { Name: "Id", Of: QueryValue { Name: "NextMove", Of: QueryValue { Name: "Monster", Of: ParameterValue or NamedValue } } };
+        static string? Text(ProgramValue value) => value is NamedValue { Name: var name } && name.Length > 1 && name[0] == '"' && name[^1] == '"' ? name[1..^1] : null;
+        return test switch
+        {
+            QueryValue { Name: "Equals", Arguments: [var compared] } equals when IsNextMoveId(equals.Of) => Text(compared),
+            CompareValue { Op: Comparison.Equal } same when IsNextMoveId(same.Left) => Text(same.Right),
+            QueryValue { Name: "op_Equality", Arguments: [var left, var right] } when IsNextMoveId(left) => Text(right),
+            _ => null,
+        };
+    }
+
+    /// <summary>An enemy's fields with the numbers of its own its move rules ask (CounterKeys), each as the game's monster has it now (decision #411).</summary>
+    internal static NamedCounts CounterFields(MonsterModel monster, NamedCounts fields)
+    {
+        foreach (var key in CounterKeys(monster.GetType()))
+        {
+            var name = key[(key.LastIndexOf('.') + 1)..];
+            if (monster.GetType().GetProperty(name, Any)?.GetValue(monster) is int value) fields = fields.With(key, value);
         }
         return fields;
     }

@@ -22,6 +22,12 @@ public sealed record ConstantValue(long Value) : ProgramValue
     public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
 
+/// <summary>A constant in the code that isn't a whole number (a float or double: a monster's move weight, 1f / 12f).</summary>
+public sealed record RealValue(double Value) : ProgramValue
+{
+    public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
+
 /// <summary>null.</summary>
 public sealed record NullValue : ProgramValue
 {

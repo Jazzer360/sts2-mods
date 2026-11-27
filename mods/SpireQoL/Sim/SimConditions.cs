@@ -104,6 +104,22 @@ public enum SimCounted
     /// from the game's monster and set by a power's code on its owner's monster (a MonsterStateStep: Imbalanced's); 0 when it's dead.
     /// </summary>
     MonsterState,
+    /// <summary>
+    /// A number of the asking monster's own that its moves count (decision #411: CountCondition.Field, "Monster.TwoTailedRat.TurnsUntilSummonable",
+    /// which each of its moves counts down), in its fields: seeded from the game's monster, each of its moves' readable stores followed in a
+    /// projection (MoveStoreAction), one it can't read forgetting it. Not there: not known.
+    /// </summary>
+    MonsterCounter,
+    /// <summary>
+    /// The encounter's slots no living enemy stands in (EncounterModel.GetNextSlot, empty when there's none: Two-Tailed Rat's room to call for
+    /// backup): SimState.EncounterSlots less the living enemies with SimEnemy.InSlot; not known once a creature joined whose slot isn't read.
+    /// </summary>
+    FreeSlots,
+    /// <summary>
+    /// The asking monster's living teammates (without it when CountCondition.ExcludingItself) whose next move is CountCondition.Move (their
+    /// Monster.NextMove.Id: SimEnemy.NextMoveId); not known while one of them has a next move that isn't (decision #411).
+    /// </summary>
+    SideNextMove,
 }
 
 /// <summary>
@@ -174,8 +190,11 @@ public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int 
 
     /// <summary>MonsterSideAlive: the asking monster itself isn't counted (c != base.Creature).</summary>
     public bool ExcludingItself { get; init; }
-    /// <summary>MonsterState: its key among the monster's fields ("Monster.BowlbugRock.IsOffBalance").</summary>
+    /// <summary>MonsterState, MonsterCounter: its key among the monster's fields ("Monster.BowlbugRock.IsOffBalance").</summary>
     public string? Field { get; init; }
+
+    /// <summary>SideNextMove: the move id its teammates' next moves are compared with ("CALL_FOR_BACKUP_MOVE").</summary>
+    public string? Move { get; init; }
 }
 
 /// <summary>A test decided when it was read (SimTest.Known): a monster's own flag the simulator doesn't follow, the slot it stands in.</summary>

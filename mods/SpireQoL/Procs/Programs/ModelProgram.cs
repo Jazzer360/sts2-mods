@@ -1635,18 +1635,81 @@ public static class ProgramReader
         public ProgramCondition Returned()
         {
             var returned = ProgramCondition.Never;
-            for (var i = 0; i < Ops.Count; i++)
+            foreach (var (at, reached, value) in ReturnWays())
             {
-                if (Ops[i].OpCode != OpCodes.Ret || ReachedAt(i) is not { IsNever: false } reached) continue;
-                var value = ValueBefore(i);
                 returned = value switch
                 {
                     ConstantValue { Value: 0 } => returned,
                     ConstantValue => returned.Or(reached),
-                    _ => returned.Or(reached.And(new ConditionLiteral($"{_site}:{Ops[i].Offset:X4}", value, Holds: true))),
+                    _ => returned.Or(reached.And(new ConditionLiteral($"{_site}:{Ops[at].Offset:X4}", value, Holds: true))),
                 };
             }
             return returned;
+        }
+
+        /// <summary>
+        /// Each way the method returns, in the code's order: a ret, and a leave to one (a return from inside a foreach or a try: leave to ldc; ret, or to
+        /// ldloc n; ret after stloc n), with the condition it's reached on and the value it returns. A way out of a foreach the loop's end falls through
+        /// to (every item gone round) also holds only when no item took one of the loop's own returns (LoopFinished).
+        /// </summary>
+        private IEnumerable<(int At, ProgramCondition Reached, ProgramValue Value)> ReturnWays()
+        {
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                var instruction = Ops[i];
+                if (instruction.OpCode == OpCodes.Ret)
+                {
+                    if (ReachedAt(i) is { IsNever: false } reached) yield return (i, LoopFinished(i, reached), ValueBefore(i));
+                    continue;
+                }
+                if (instruction.OpCode != OpCodes.Leave && instruction.OpCode != OpCodes.Leave_S || ReachedAt(i) is not { IsNever: false } left) continue;
+                if (LeftWith(i, IndexOf(instruction.Targets[0])) is { } value) yield return (i, LoopFinished(i, left), value);
+            }
+        }
+
+        /// <summary>
+        /// What a leave at <paramref name="at"/> to <paramref name="target"/> returns: the constant there (ldc; ret), or what it stored for it (stloc n;
+        /// leave to ldloc n; ret). Null for a leave that isn't a return (to code that goes on, or an async method's SetResult).
+        /// </summary>
+        private ProgramValue? LeftWith(int at, int target)
+        {
+            if (target + 1 >= Ops.Count || Ops[target + 1].OpCode != OpCodes.Ret) return null;
+            var load = Ops[target];
+            var name = load.OpCode.Name!;
+            if (name.StartsWith("ldc", StringComparison.Ordinal) && (load.Integer != null || load.Real != null)) return ReadBack(target + 1, depth: 0, merge: false).Value;
+            if (name.StartsWith("ldloc", StringComparison.Ordinal) && at > 0 && Ops[at - 1].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal) && Ops[at - 1].Slot == load.Slot)
+                return ReadBack(at - 1, depth: 0).Value;
+            return new UnknownValue("a return's value");
+        }
+
+        /// <summary>
+        /// A way reached as a foreach ends with every item gone round (the leave or code straight after its MoveNext test) holds only when no item
+        /// took one of the loop's returns: <paramref name="reached"/> and, for each return inside the loop on a test of its own, not Any(the items,
+        /// item =&gt; that test) (Two-Tailed Rat's CanSummon: no teammate whose next move is Call for Backup). Any other way as it is.
+        /// </summary>
+        private ProgramCondition LoopFinished(int at, ProgramCondition reached)
+        {
+            foreach (var (start, end) in _loopEnds)
+            {
+                if (end >= at || at - end > 3 || Ops[end].Member is not { Name: "MoveNext" } && !(end > 0 && Ops[end - 1].Member is { Name: "MoveNext" })) continue;
+                var straight = true;
+                for (var between = end + 1; between < at; between++) if (Ops[between].IsBranch || Ops[between].OpCode == OpCodes.Ret) straight = false;
+                if (!straight || LoopItems(start) is not { } items) continue;
+                var entry = LoopEntry(start);
+                for (var inside = start; inside <= end; inside++)
+                {
+                    var exit = Ops[inside];
+                    var returns = exit.OpCode == OpCodes.Ret || (exit.OpCode == OpCodes.Leave || exit.OpCode == OpCodes.Leave_S) && LeftWith(inside, IndexOf(exit.Targets[0])) != null;
+                    if (!returns || ReachedAt(inside) is not { IsNever: false } taken) continue;
+                    var test = taken.Without(entry);
+                    if (test.IsAlways) return ProgramCondition.Never; // the first item always returns: no way finishes the loop with one
+                    // The loop's item reads as each (its Current, kept in a local).
+                    var lambda = new LambdaValue("each", test);
+                    var any = new QueryValue("Enumerable", "Any", Of: null, new[] { items, lambda }, "Boolean");
+                    reached = reached.And(new ConditionLiteral($"{_site}:{exit.Offset:X4}:any", any, Holds: false));
+                }
+            }
+            return reached;
         }
 
         /// <summary>
@@ -1695,8 +1758,7 @@ public static class ProgramReader
         public WaysValue ReturnedWays()
         {
             var ways = new List<(ProgramCondition When, ProgramValue Value)>();
-            for (var i = 0; i < Ops.Count; i++)
-                if (Ops[i].OpCode == OpCodes.Ret && ReachedAt(i) is { IsNever: false } reached) ways.Add((reached, WithFieldsSet(i, ValueBefore(i))));
+            foreach (var (at, reached, value) in ReturnWays()) ways.Add((reached, Ops[at].OpCode == OpCodes.Ret ? WithFieldsSet(at, value) : value));
             return new WaysValue(ways);
         }
 
@@ -1840,6 +1902,7 @@ public static class ProgramReader
             var instruction = Ops[at];
             var name = instruction.OpCode.Name!;
             if (instruction.Integer is { } constant && name.StartsWith("ldc", StringComparison.Ordinal)) return (new ConstantValue(constant), at);
+            if (instruction.Real is { } real && name.StartsWith("ldc", StringComparison.Ordinal)) return (new RealValue(real), at);
             if (instruction.OpCode == OpCodes.Ldnull) return (NullValue.Instance, at);
             if (instruction.OpCode == OpCodes.Ldstr) return (new NamedValue("\"" + instruction.Text + "\""), at);
             if (name.StartsWith("ldarg", StringComparison.Ordinal))

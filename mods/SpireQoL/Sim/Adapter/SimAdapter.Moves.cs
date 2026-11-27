@@ -92,6 +92,11 @@ public static partial class SimAdapter
                 }
                 else actions.AddRange(MoveStep(step, context, each: null));
             }
+            // A number its move rules ask that the move's code sets in a way the reader doesn't keep (decision #411: Call for Backup's count, set on
+            // every rat in a lambda): forgotten as it runs, so what asks it is unknown from there.
+            foreach (var written in CountersWritten(monster.GetType(), perform))
+                if (!actions.Any(action => action is MoveStoreAction { Counter: true } store && store.Field == written))
+                    actions.Add(new MoveStoreAction(written, Amount: 0, Unknown: "set where the reader doesn't follow it", Counter: true));
             return actions;
         }
         catch
@@ -99,6 +104,42 @@ public static partial class SimAdapter
             return null;
         }
     }
+
+    /// <summary>
+    /// The numbers of its own its move rules ask (MoveConditions.CounterKeys) whose setter a move's code calls anywhere: its method, its async state
+    /// machine and the lambdas made inside it (decision #411: Call for Backup's ForEach setting every rat's CallForBackupCount). Read once per move.
+    /// </summary>
+    private static IReadOnlyList<string> CountersWritten(Type monster, System.Reflection.MethodInfo perform) => WrittenByMove.GetOrAdd((monster, perform.Name), key =>
+    {
+        var counters = MoveConditions.CounterKeys(key.Monster);
+        if (counters.Count == 0) return Array.Empty<string>();
+        const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+        var marker = "<" + key.Move + ">";
+        var methods = new List<System.Reflection.MethodBase> { perform };
+        foreach (var nested in key.Monster.GetNestedTypes(System.Reflection.BindingFlags.NonPublic))
+            foreach (var method in nested.GetMethods(all))
+                if (nested.Name.Contains(marker, StringComparison.Ordinal) || method.Name.Contains(marker, StringComparison.Ordinal)) methods.Add(method);
+        foreach (var method in key.Monster.GetMethods(all))
+            if (method.Name.Contains(marker, StringComparison.Ordinal)) methods.Add(method);
+        var setters = counters.ToDictionary(counter => "set_" + counter[(counter.LastIndexOf('.') + 1)..], counter => counter, StringComparer.Ordinal);
+        var written = new List<string>();
+        foreach (var method in methods)
+        {
+            try
+            {
+                foreach (var instruction in RuntimeCode.Read(method))
+                    if (instruction.IsCall && instruction.Member is { } member && setters.TryGetValue(member.Name, out var counter) && !written.Contains(counter)) written.Add(counter);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException or ArgumentException)
+            {
+                // code that can't be read sets nothing the reader follows
+            }
+        }
+        return written;
+    });
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Monster, string Move), IReadOnlyList<string>> WrittenByMove = new();
 
     /// <summary>
     /// The moves a power's code can set <paramref name="creature"/>'s monster to (its read program's SetMoveSteps: Steam Eruption's AboutToBlowState),
@@ -324,6 +365,10 @@ public static partial class SimAdapter
         if (step is StoreStep store && context.Board.Self is MonsterModel owner && DamageFieldKey(owner.GetType(), store.Field) is { } key
             && DamageFields(owner).Contains(key))
             return new SimAction[] { MoveStoreOf(store, key, context) };
+        // A store to a number of its own its move rules ask (decision #411: Two-Tailed Rat's TurnsUntilSummonable--), kept the same way.
+        if (step is StoreStep counted && each == null && context.Board.Self is MonsterModel counting && DamageFieldKey(counting.GetType(), counted.Field) is { } counter
+            && MoveConditions.CounterKeys(counting.GetType()).Contains(counter))
+            return new SimAction[] { CounterStoreOf(counted, counter, context) };
         // CreatureCmd.Stun of its own creature (Bowlbug Rock's Headbutt when off balance), on its condition as the simulator asks it of the monster's own
         // state (MoveConditions.OfStep: decision #271); a condition it can't ask is a gap.
         if (step is CommandStep { Command.FullName: "CreatureCmd.Stun" } stun && stun.Values.Count > 0 && each == null
@@ -458,7 +503,7 @@ public static partial class SimAdapter
 
     /// <summary>
     /// A move's store to a property of its own its damage reads, as the projection runs it (MoveStoreAction): the amount of its own power
-    /// (this.Creature.GetPowerAmount&lt;T&gt;(): About to Blow's), more than it was (this.X add n: Pressure Gun's), or a number worked out now that
+    /// (this.Creature.GetPowerAmount&lt;T&gt;(): About to Blow's), more than it was (this.X add n: Pressure Gun's; sub n: Two-Tailed Rat's countdown), or a number worked out now that
     /// reads no power; anything else, or one on a condition, is unknown.
     /// </summary>
     private static MoveStoreAction MoveStoreOf(StoreStep store, string key, MoveContext context)
@@ -468,13 +513,31 @@ public static partial class SimAdapter
         if (value is QueryValue { Name: "GetPowerAmount", GenericArguments: [var powerName], Of: QueryValue { Name: "Creature", Of: NamedValue { Name: "this" } } }
             && PowerType(powerName) is { } powerType)
             return new MoveStoreAction(key, Amount: 0, OwnPower: PowerId.Of(SimPowerName(powerType)));
-        if (value is ArithmeticValue { Op: "add", Left: QueryValue { Name: var name, Of: NamedValue { Name: "this" } } itself, Right: var right } && name == store.Field
-            && !ReadsAPower(right) && Number(Value(right, context, each: null)) is { } more && Number(Value(itself, context, each: null)) is { } now)
-            return new MoveStoreAction(key, (int)more, Adds: true, Now: (int)now);
+        if (value is ArithmeticValue { Op: "add" or "sub" } arithmetic && arithmetic.Left is QueryValue { Name: var name, Of: NamedValue { Name: "this" } } itself && name == store.Field
+            && !ReadsAPower(arithmetic.Right) && Number(Value(arithmetic.Right, context, each: null)) is { } more && Number(Value(itself, context, each: null)) is { } now)
+            return new MoveStoreAction(key, (int)(arithmetic.Op == "sub" ? -more : more), Adds: true, Now: (int)now);
         if (!ReadsAPower(value) && !value.Parts().Any(part => part is QueryValue { Name: var read, Of: NamedValue { Name: "this" } } && read == store.Field)
             && Number(Value(value, context, each: null)) is { } amount)
             return new MoveStoreAction(key, (int)amount);
         return new MoveStoreAction(key, Amount: 0, Unknown: value.ToString());
+    }
+
+    /// <summary>
+    /// A move's store to a number of its own its move rules ask (decision #411): more or less than it was (this.TurnsUntilSummonable--: sub 1), or a number
+    /// worked out now that reads no power; anything else, or one on a condition, forgets it.
+    /// </summary>
+    private static MoveStoreAction CounterStoreOf(StoreStep store, string key, MoveContext context)
+    {
+        if (store.Condition != null) return new MoveStoreAction(key, Amount: 0, Unknown: "on a condition", Counter: true);
+        var value = StepValues.Unstored(store.Value)!;
+        // Its own value read first, kept in a local for the decrement (x = this.T; this.T = x - 1).
+        if (value is ArithmeticValue { Op: "add" or "sub" } arithmetic && (arithmetic.Left is StoredValue kept ? kept.Value : arithmetic.Left) is QueryValue { Name: var name, Of: NamedValue { Name: "this" } }
+            && name == store.Field && !ReadsAPower(arithmetic.Right) && Number(Value(arithmetic.Right, context, each: null)) is { } more)
+            return new MoveStoreAction(key, (int)(arithmetic.Op == "sub" ? -more : more), Adds: true, Counter: true);
+        if (!ReadsAPower(value) && !value.Parts().Any(part => part is QueryValue { Name: var read, Of: NamedValue { Name: "this" } } && read == store.Field)
+            && Number(Value(value, context, each: null)) is { } amount)
+            return new MoveStoreAction(key, (int)amount, Counter: true);
+        return new MoveStoreAction(key, Amount: 0, Unknown: value.ToString(), Counter: true);
     }
 
     /// <summary>A value that reads a creature's powers, which a projection changes: worked out now, it wouldn't be the value as the move runs.</summary>

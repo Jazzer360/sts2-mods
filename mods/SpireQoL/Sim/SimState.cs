@@ -227,6 +227,14 @@ public sealed class SimEnemy
     /// <summary>The move a stun this simulation gave it as the one after the stunned move (CreatureCmd.Stun's nextMoveId: StunStep.NextMove); null: none.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? NextAfterStun;
+    /// <summary>
+    /// Its next move as the game has it (MonsterModel.NextMove.Id: the intent on screen), then each move a projection rolls for it (decision #411):
+    /// what a teammate's move rules ask (Two-Tailed Rat's CanSummon). Null: not known (behind a hidden intent, a random roll, a creature joining).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? NextMoveId;
+    /// <summary>It stands in one of the encounter's slots (Creature.SlotName among EncounterModel.Slots): what SimCounted.FreeSlots counts.</summary>
+    public bool InSlot;
     /// <summary>The stunned move's code (StunStep.Move: Slumbering Beetle's WakeUpMove taking its Plating), run as it acts in the enemy turn; null: none.</summary>
     [JsonIgnore] public SimStunnedMove? StunnedMove;
 
@@ -322,6 +330,7 @@ public sealed class SimEnemy
             if (LandedOnYou != null) { key.Add(LandedOnYou.Length); foreach (var hit in LandedOnYou) key.Add(hit); }
         }
         if (NextAfterStun != null || StunnedMove != null) { key.Add(-92); key.Add(NextAfterStun?.GetHashCode() ?? 0); key.Add(StunnedMove?.Name.GetHashCode() ?? 0); }
+        if (NextMoveId != null) { key.Add(-93); key.Add(NextMoveId.GetHashCode()); }
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
@@ -337,6 +346,7 @@ public sealed class SimEnemy
         key.Add(-91); key.Add(ProjectedMove?.GetHashCode() ?? 0); key.Add(MoveUnknown?.GetHashCode() ?? 0); key.Add(LandedUnknown ? 1 : 0); key.Add(MoveNotForecast ? 1 : 0);
         if (LandedOnYou != null) { key.Add(LandedOnYou.Length); foreach (var hit in LandedOnYou) key.Add(hit); }
         key.Add(-92); key.Add(NextAfterStun?.GetHashCode() ?? 0); key.Add(StunnedMove?.Name.GetHashCode() ?? 0);
+        if (NextMoveId != null) { key.Add(-93); key.Add(NextMoveId.GetHashCode()); }
         Powers.Hash(ref key);
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
@@ -1147,6 +1157,11 @@ public sealed class SimState
     /// never reaches the players' next turn.
     /// </summary>
     public int TurnNumber;
+    /// <summary>
+    /// The encounter's slots (EncounterModel.Slots' count: decision #411, what SimCounted.FreeSlots counts against); null where not read, or once a
+    /// creature joined the simulation whose slot isn't read.
+    /// </summary>
+    public int? EncounterSlots;
     /// <summary>
     /// The fight's round (CombatState.RoundNumber: 1 on its first, one more as each round's players' turn starts, not for an extra turn), read from
     /// the game. Constant: a simulation never reaches the players' next turn.

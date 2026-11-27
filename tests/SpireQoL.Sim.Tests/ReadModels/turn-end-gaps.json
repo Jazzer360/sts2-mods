@@ -79,7 +79,7 @@
   },
   {
     "Name": "ShrinkPower",
-    "Why": "ShrinkPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: changes a game object outside a command (Vantom.ScaleTo))",
+    "Why": "ShrinkPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: the value {not this.Owner.Monster.Creature.GetCreatureNode(): null; this.Owner.Monster.Creature.GetCreatureNode(): this.Owner.Monster.Creature.GetCreatureNode().GetSpecialNode\u003CNode2D\u003E(\u0022Visuals/ScalingBone\u0022)}.CreateTween())",
     "ActsForAnEnemy": true
   },
   {

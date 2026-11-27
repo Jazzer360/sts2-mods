@@ -74,6 +74,12 @@ public sealed class Projection
 
     /// <summary>An enemy's forecast turns as the projection worked them out, or null: it had no rules read (the forecast as read now stands).</summary>
     public List<ForecastTurn>? ForecastOf(int enemyId) => Moves.TryGetValue(enemyId, out var turns) ? turns : null;
+
+    /// <summary>
+    /// The enemies whose next roll asks what the projection couldn't tell (decision #411: a random branch's weight read from its code, on a number it
+    /// forgot or a teammate's move it doesn't know): their forecast ends before it, never with the weights as they stand now.
+    /// </summary>
+    public HashSet<int> UnknownRolls { get; } = new();
 }
 
 public static partial class SimEngine
@@ -223,10 +229,12 @@ public static partial class SimEngine
                 if (first is not { Count: 1 })
                 {
                     roll.Over = true;
+                    enemy.NextMoveId = null;
                     continue;
                 }
                 roll.Last = first[0].Move;
                 roll.Log.Add(first[0].Move);
+                enemy.NextMoveId = first[0].Move;
             }
         }
     }
@@ -242,40 +250,122 @@ public static partial class SimEngine
         Projection projection, int turn)
     {
         var choices = given.Where(choice => !rolling.ContainsKey(choice.EnemyId)).ToList();
-        foreach (var (enemyId, roll) in rolling)
+        var known = states is { Count: > 0 } && states.All(state => state.Unmodelled == null && state.UnmodelledAtTheirTurnEnd == null);
+        // The enemies roll in the fight's order (CombatManager.StartTurn: each enemy's PrepareForNextTurn), each next move what a later one's rules can
+        // ask (decision #411: SimEnemy.NextMoveId); the random rolls so far, each outcome with its chance, for a later one that asks them.
+        List<(double Chance, List<(int Enemy, string Move)> Moves)>? outcomes = null;
+        var order = (states is { Count: > 0 } ? states[0].Enemies.Select(enemy => enemy.Id) : Enumerable.Empty<int>()).Concat(rolling.Keys)
+            .Concat(given.Select(choice => choice.EnemyId)).Distinct().ToList();
+        foreach (var enemyId in order)
         {
-            if (roll.Over) continue;
-            var known = states is { Count: > 0 } && states.All(state => state.Unmodelled == null && state.UnmodelledAtTheirTurnEnd == null);
-            IReadOnlyList<(string Move, double Chance)>? next = null;
-            if (known)
+            if (!rolling.TryGetValue(enemyId, out var roll))
             {
-                foreach (var state in states!)
-                {
-                    if (state.Enemy(enemyId) is not { Alive: true } enemy || enemy.Stunned) { next = null; break; }
-                    var from = enemy.NextAfterStun ?? roll.From;
-                    var these = IntentForecast.NextInProjection(roll.Rules.Graph, from, roll.Log, state, enemyId);
-                    if (these == null || next != null && !these.SequenceEqual(next)) { next = null; break; }
-                    next = these;
-                }
+                // One whose rules aren't read takes its forecast move: certain, it's its next move; else not known.
+                if (given.FirstOrDefault(choice => choice.EnemyId == enemyId) is { } choice && known)
+                    NextMoveIs(states!, enemyId, choice.Options.Count == 1 ? choice.Options[0].Move.Id : null);
+                continue;
             }
-            else next = IntentForecast.NextInProjection(roll.Rules.Graph, roll.From, roll.Log, state: null, enemyId);
+            if (roll.Over) continue;
+            var asks = IntentForecast.AsksTheState(roll.Rules.Graph);
+            IReadOnlyList<(string Move, double Chance)>? next = null;
+            List<IReadOnlyList<(string Move, double Chance)>>? inEach = null;
+            if (known) (next, inEach) = RolledIn(states!, outcomes, roll, enemyId);
+            // Past what the simulator follows: the game's lambdas as they answer now, unless a weight asks the state (never as read now).
+            else if (!asks) next = IntentForecast.NextInProjection(roll.Rules.Graph, roll.From, roll.Log, state: null, enemyId);
             if (next is not { Count: > 0 })
             {
                 roll.Over = true;
+                if (asks) projection.UnknownRolls.Add(enemyId);
+                if (known) NextMoveIs(states!, enemyId, move: null);
                 continue;
             }
             projection.Moves[enemyId].Add(new ForecastTurn(next));
-            if (next.Count > 1) roll.Over = true; // the first random pick ends it
+            if (next.Count > 1)
+            {
+                roll.Over = true; // the first random pick ends it
+                if (known)
+                {
+                    NextMoveIs(states!, enemyId, move: null);
+                    outcomes = WithOutcomes(outcomes, enemyId, inEach!);
+                }
+            }
             else
             {
                 roll.Last = next[0].Move;
                 roll.Log.Add(next[0].Move);
                 if (states != null) foreach (var state in states) if (state.Enemy(enemyId) is { } enemy) enemy.NextAfterStun = null; // its stun's named move is rolled
+                if (known) NextMoveIs(states!, enemyId, next[0].Move);
             }
             choices.Add(new ProjectedChoice(enemyId, next.Select(option =>
                 (roll.Rules.Moves.GetValueOrDefault(option.Move) ?? new ProjectedMove(option.Move), option.Chance)).ToList()));
         }
         return choices;
+    }
+
+    /// <summary>The most outcomes of earlier random rolls a later enemy's rules are asked in (decision #411); past it, its roll isn't known.</summary>
+    private const int MostOutcomes = 64;
+
+    /// <summary>
+    /// An enemy's roll on the projected <paramref name="states"/> (every branch agreeing, alive and not stunned): once for each outcome of the random
+    /// rolls before it this turn when its rules ask its teammates' next moves (decision #411: each outcome's moves set as their next, its chance its
+    /// share), else once. The roll over all of them, and in each outcome (one entry when they weren't asked); null when it can't be said.
+    /// </summary>
+    private static (IReadOnlyList<(string Move, double Chance)>? Next, List<IReadOnlyList<(string Move, double Chance)>>? InEach) RolledIn(List<SimState> states,
+        List<(double Chance, List<(int Enemy, string Move)> Moves)>? outcomes, MoveRoll roll, int enemyId)
+    {
+        if (outcomes == null || !IntentForecast.AsksTeammatesMoves(roll.Rules.Graph))
+        {
+            var once = AgreedRoll(states, roll, enemyId);
+            return (once, once == null ? null : Enumerable.Repeat(once, outcomes?.Count ?? 1).ToList());
+        }
+        if (outcomes.Count > MostOutcomes) return (null, null);
+        var spread = new Dictionary<string, double>(StringComparer.Ordinal);
+        var inEach = new List<IReadOnlyList<(string Move, double Chance)>>();
+        foreach (var (chance, moves) in outcomes)
+        {
+            foreach (var (other, move) in moves) NextMoveIs(states, other, move);
+            var these = AgreedRoll(states, roll, enemyId);
+            foreach (var (other, _) in moves) NextMoveIs(states, other, move: null);
+            if (these == null) return (null, null);
+            inEach.Add(these);
+            foreach (var (move, share) in these) spread[move] = spread.GetValueOrDefault(move) + chance * share;
+        }
+        var next = spread.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal)
+            .Select(entry => (entry.Key, entry.Value)).ToList();
+        return (next, inEach);
+    }
+
+    /// <summary>An enemy's roll from its rules asked of each branch; null where a branch has it dead or stunned, or the branches don't agree.</summary>
+    private static IReadOnlyList<(string Move, double Chance)>? AgreedRoll(List<SimState> states, MoveRoll roll, int enemyId)
+    {
+        IReadOnlyList<(string Move, double Chance)>? next = null;
+        foreach (var state in states)
+        {
+            if (state.Enemy(enemyId) is not { Alive: true } enemy || enemy.Stunned) return null;
+            var from = enemy.NextAfterStun ?? roll.From;
+            var these = IntentForecast.NextInProjection(roll.Rules.Graph, from, roll.Log, state, enemyId);
+            if (these == null || next != null && !these.SequenceEqual(next)) return null;
+            next = these;
+        }
+        return next;
+    }
+
+    /// <summary>The outcomes so far, each followed by each of an enemy's random roll's moves in it (its roll in that outcome: <paramref name="inEach"/>).</summary>
+    private static List<(double Chance, List<(int Enemy, string Move)> Moves)> WithOutcomes(List<(double Chance, List<(int Enemy, string Move)> Moves)>? outcomes,
+        int enemyId, List<IReadOnlyList<(string Move, double Chance)>> inEach)
+    {
+        outcomes ??= new List<(double, List<(int, string)>)> { (1.0, new List<(int, string)>()) };
+        var more = new List<(double Chance, List<(int Enemy, string Move)> Moves)>();
+        for (var i = 0; i < outcomes.Count; i++)
+            foreach (var (move, share) in inEach[Math.Min(i, inEach.Count - 1)])
+                more.Add((outcomes[i].Chance * share, new List<(int, string)>(outcomes[i].Moves) { (enemyId, move) }));
+        return more;
+    }
+
+    /// <summary>An enemy's next move in every branch (SimEnemy.NextMoveId: decision #411); null: not known.</summary>
+    private static void NextMoveIs(List<SimState> states, int enemyId, string? move)
+    {
+        foreach (var state in states) if (state.Enemy(enemyId) is { } enemy) enemy.NextMoveId = move;
     }
 
     /// <summary>

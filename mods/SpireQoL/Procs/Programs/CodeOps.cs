@@ -49,6 +49,8 @@ public sealed record CodeOp(int Offset, OpCode OpCode)
     /// <summary>A branch's target offsets (a switch has several).</summary>
     public IReadOnlyList<int> Targets { get; init; } = Array.Empty<int>();
     public long? Integer { get; init; }
+    /// <summary>A float or double constant that isn't a whole number (ldc.r4 0.083333336: a monster's move weight); a whole one is its Integer.</summary>
+    public double? Real { get; init; }
     public string? Text { get; init; }
     /// <summary>The local or argument index a load or store names.</summary>
     public int? Slot { get; init; }
@@ -57,7 +59,7 @@ public sealed record CodeOp(int Offset, OpCode OpCode)
     public bool IsBranch => OpCode.FlowControl is FlowControl.Branch or FlowControl.Cond_Branch;
 
     public override string ToString() => $"{Offset:X4} {OpCode.Name}" + (Member != null ? " " + Member : "") + (Targets.Count > 0 ? " -> " + string.Join(",", Targets.Select(target => target.ToString("X4"))) : "")
-        + (Integer != null ? " " + Integer : "") + (Text != null ? " \"" + Text + "\"" : "") + (Slot != null ? " #" + Slot : "");
+        + (Integer != null ? " " + Integer : "") + (Real != null ? " " + Real.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "") + (Text != null ? " \"" + Text + "\"" : "") + (Slot != null ? " #" + Slot : "");
 }
 
 /// <summary>
@@ -68,6 +70,9 @@ public static class CodeDecoder
 {
     private static readonly Dictionary<short, OpCode> ByValue = typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)
         .Select(field => (OpCode)field.GetValue(null)!).ToDictionary(opCode => opCode.Value);
+
+    private static CodeOp WithReal(CodeOp instruction, double real) =>
+        Math.Abs(real) < 1e15 && Math.Floor(real) == real ? instruction with { Integer = (long)real } : instruction with { Real = real };
 
     public static List<CodeOp> Decode(byte[] code, Func<int, CodeMember?> member, Func<int, string?> text)
     {
@@ -126,13 +131,16 @@ public static class CodeDecoder
                     break;
                 case OperandType.InlineR:
                 {
-                    // A double constant that's a whole number (Shadowmeld's Math.Pow(2.0, ...)) is that number; any other isn't read.
-                    var real = BitConverter.ToDouble(code, position);
-                    if (Math.Abs(real) < 1e15 && Math.Floor(real) == real) instruction = instruction with { Integer = (long)real };
+                    // A double constant that's a whole number (Shadowmeld's Math.Pow(2.0, ...)) is that number; any other its Real.
+                    instruction = WithReal(instruction, BitConverter.ToDouble(code, position));
                     position += 8;
                     break;
                 }
                 case OperandType.ShortInlineR:
+                    // A float constant, the same way (a monster's move weight: 1f, 1f / 12f folded to 0.083333336).
+                    instruction = WithReal(instruction, BitConverter.ToSingle(code, position));
+                    position += 4;
+                    break;
                 case OperandType.InlineSig:
                     position += 4;
                     break;

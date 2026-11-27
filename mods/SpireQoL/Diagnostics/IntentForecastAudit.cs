@@ -40,6 +40,7 @@ internal static class IntentForecastAudit
                 return;
             }
             CheckConditions(__instance, machine);
+            CheckWeights(__instance, machine);
             var current = new MoveNodeMove(__instance.NextMove.Id, __instance.NextMove.FollowUpState?.Id ?? __instance.NextMove.FollowUpStateId);
             var turns = IntentForecast.Forecast(graph, current, machine.StateLog.Select(monsterState => monsterState.Id).ToList(), maxTurns: 1);
             __state = turns.FirstOrDefault();
@@ -75,6 +76,43 @@ internal static class IntentForecastAudit
                 if (Reported.Add("condition|" + details) && Reported.Count <= 200)
                     Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"A conditional move branch read differently from the game: {name}",
                         new[] { "intent", name }, details);
+            }
+    }
+
+    /// <summary>
+    /// The random branches' weights read from their lambdas' code (decision #411: MoveConditions.WeightWays), asked of the adapter's state as this
+    /// monster, against the game's own lambdas as the game is about to ask them: a difference is reported as a mismatch, one the simulator can't
+    /// tell counted as not checked. What the projection rolls rests on them.
+    /// </summary>
+    private static void CheckWeights(MonsterModel monster, MonsterMoveStateMachine machine)
+    {
+        var picks = machine.States.Values.OfType<RandomBranchState>().ToList();
+        if (picks.Count == 0 || Sts2State.Me is not { } me || monster.Creature.CombatState is not { } combat) return;
+        SimState? state = null;
+        var id = -1;
+        var name = monster.GetType().Name;
+        foreach (var pick in picks)
+            foreach (var stateWeight in pick.States)
+            {
+                if (MoveConditions.WeightWays(monster, stateWeight.weightLambda) is not { } ways) continue;
+                if (state == null)
+                {
+                    state = SimAdapter.Build(me, combat, out var ids);
+                    if (!ids.TryGetValue(monster.Creature, out id)) return;
+                }
+                var game = (double)stateWeight.GetWeight();
+                var simulated = IntentForecast.WeightAsked(new RandomBranch(stateWeight.stateId, MoveRepeat.CanRepeatForever, 0, 0, float.NaN) { Ways = ways }, state, id);
+                if (double.IsNaN(simulated))
+                {
+                    Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "a random branch's weight the simulator can't tell on the board", name);
+                    continue;
+                }
+                if (Math.Abs(simulated - game) < 1e-5) continue;
+                var details = $"{name} {pick.Id} -> {stateWeight.stateId}: the game's weight {game}, the simulator's {simulated}";
+                ModEntry.Log.Detail("[audit] [intent] weight: " + details);
+                if (Reported.Add("weight|" + details) && Reported.Count <= 200)
+                    Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"A random move branch's weight read differently from the game: {name}",
+                        new[] { "intent-weight", name }, details);
             }
     }
 

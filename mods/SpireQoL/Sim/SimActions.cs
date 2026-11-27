@@ -251,8 +251,11 @@ public sealed record MoveBlockAction(int Amount, IReadOnlyList<int> To) : SimAct
 /// step runs, else <paramref name="Amount"/> more than it was when <paramref name="Adds"/> (<paramref name="Now"/> as the adapter read it, until a
 /// move set it), else <paramref name="Amount"/>. <paramref name="Unknown"/>: a value that couldn't be read, so a later hit reading it isn't known.
 /// Only a projection runs it (SimState.Forecasting): no later turn's hit is simulated anywhere else.
+/// A number its move rules count (decision #411, <paramref name="Counter"/>: Two-Tailed Rat's TurnsUntilSummonable, which each of its moves counts down) is
+/// kept the same way, but one not known stays not known, and one written in a way that isn't read (Call for Backup's count, set on every rat) is
+/// forgotten on every enemy of its class: what asks it is unknown from there.
 /// </summary>
-public sealed record MoveStoreAction(string Field, int Amount, bool Adds = false, int Now = 0, PowerId? OwnPower = null, string? Unknown = null) : SimAction;
+public sealed record MoveStoreAction(string Field, int Amount, bool Adds = false, int Now = 0, PowerId? OwnPower = null, string? Unknown = null, bool Counter = false) : SimAction;
 
 /// <summary>
 /// An enemy's move stunning itself (CreatureCmd.Stun of its own creature, decision #271: Bowlbug Rock's Headbutt when it's off balance, under a

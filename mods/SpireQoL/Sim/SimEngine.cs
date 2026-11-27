@@ -706,6 +706,7 @@ public static partial class SimEngine
     {
         enemy.Stunned = true;
         enemy.StunnedThisTurn = true;
+        enemy.NextMoveId = null; // its next move is the stun's now (Creature.StunInternal), whose id isn't read (decision #411)
     }
 
     /// <summary>
@@ -1991,6 +1992,7 @@ public static partial class SimEngine
         }
         var id = 0;
         foreach (var enemy in state.Enemies) id = Math.Max(id, enemy.Id + 1);
+        state.EncounterSlots = null; // the slot it joins in isn't read: the free slots aren't known from here (decision #411)
         state.Enemies.Add(new SimEnemy
         {
             Id = id, Name = spawn.Name, Monster = spawn.Monster ?? "", Hp = spawn.Hp[0], Powers = SpawnPowers(state, spawn.Powers), AddedBy = summoner.Id,

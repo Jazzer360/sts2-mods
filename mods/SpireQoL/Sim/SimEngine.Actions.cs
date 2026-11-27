@@ -1264,13 +1264,25 @@ public static partial class SimEngine
     /// </summary>
     private static void MoveStore(SimState state, SimEnemy enemy, MoveStoreAction store)
     {
+        if (store.Counter)
+        {
+            // A counter its move rules ask (decision #411): one written in a way that isn't read is forgotten on every enemy of its class (Call for
+            // Backup sets every rat's); one not known stays not known.
+            if (store.Unknown != null)
+            {
+                foreach (var other in state.Enemies)
+                    if (other.Monster == enemy.Monster && other.Fields.Has(store.Field)) other.Fields = other.Fields.Without(store.Field);
+                return;
+            }
+            if (store.Adds && !enemy.Fields.Has(store.Field)) return;
+        }
         if (store.Unknown != null)
         {
             state.Unmodelled ??= $"{enemy.Name}'s move sets what its attack's damage reads, to a value that isn't read ({store.Unknown})";
             return;
         }
         var value = store.OwnPower is { } power ? PowersOf(state, enemy.Id)[power]
-            : store.Adds ? (enemy.Fields.Has(store.Field) ? enemy.Fields[store.Field] : store.Now) + store.Amount
+            : store.Adds ? (enemy.Fields.Has(store.Field) || store.Counter ? enemy.Fields[store.Field] : store.Now) + store.Amount
             : store.Amount;
         enemy.Fields = enemy.Fields.With(store.Field, value);
     }

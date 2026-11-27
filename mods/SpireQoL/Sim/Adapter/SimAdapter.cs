@@ -152,12 +152,25 @@ public static partial class SimAdapter
         }
     }
 
+    /// <summary>The encounter's slots (EncounterModel.Slots: decision #411, what a free slot counts against); null with no encounter.</summary>
+    private static int? EncounterSlotsOf(ICombatState combat)
+    {
+        try { return combat.Encounter?.Slots.Count; }
+        catch (Exception exception) when (exception is InvalidOperationException or NullReferenceException) { return null; }
+    }
+
+    private static string? SafeString(Func<string?> read)
+    {
+        try { return read(); }
+        catch (Exception exception) when (exception is InvalidOperationException or NullReferenceException) { return null; }
+    }
+
     private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids, bool pileAutoPlays)
     {
         var idMap = new BoardIds();
         ids = idMap;
         var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, RoundNumber = combat.RoundNumber, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat),
-            HeldOpenByTheDead = HeldOpenByTheDead(combat) };
+            HeldOpenByTheDead = HeldOpenByTheDead(combat), EncounterSlots = EncounterSlotsOf(combat) };
         var mates = Teammates(me, combat);
         // Any creature's simulator id: the enemies' as they're given below (the map read as each is asked).
         var creatureIds = CreatureIds(me, mates, idMap);
@@ -195,6 +208,14 @@ public static partial class SimAdapter
             // Its move rules, where one of its powers' code compares its next move (decision #307: a stun naming the move after it).
             if (creature.IsAlive && creature.Powers.Any(power => SimModels.Get(power.GetType().Name) is ReadModel { ComparesNextMove: true })) enemy.Rules = MoveRulesOf(creature);
             if (!creature.IsAlive) enemy.Hp = 0;
+            // What a teammate's move rules ask of it (decision #411): its next move, unless its intent hides it, and whether it stands in a slot.
+            enemy.InSlot = creature.SlotName != null && combat.Encounter?.Slots.Contains(creature.SlotName) == true;
+            if (creature.Monster is { } own)
+            {
+                if (creature.IsAlive) enemy.NextMoveId = SafeString(() => own.NextMove.Intents.Any(intent => intent is HiddenIntent or UnknownIntent) ? null : own.NextMove.Id);
+                // The numbers of its own its rules ask, dead or not (the Test Subject waiting to revive asks its Respawns).
+                enemy.Fields = MoveConditions.CounterFields(own, enemy.Fields);
+            }
             if (creature.IsAlive && creature.Monster != null)
             {
                 try

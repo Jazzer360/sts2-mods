@@ -162,6 +162,26 @@ public static partial class SimEngine
                 return counted.Field is { } field && state.Enemy(monster) is { Alive: true } stateful && stateful.Fields.Has(field) ? stateful.Fields[field] : 0;
             case SimCounted.MonsterSideAlive:
                 return state.Enemies.Count(enemy => enemy.Alive && !(counted.ExcludingItself && enemy.Id == monster));
+            case SimCounted.MonsterCounter:
+                return counted.Field is { } counter && state.Enemy(monster) is { } counting && counting.Fields.Has(counter) ? counting.Fields[counter] : null;
+            case SimCounted.FreeSlots:
+            {
+                if (state.EncounterSlots is not { } slots) return null;
+                var standing = 0;
+                foreach (var enemy in state.Enemies) if (enemy.Alive && enemy.InSlot) standing++;
+                return Math.Max(0, slots - standing);
+            }
+            case SimCounted.SideNextMove:
+            {
+                var making = 0;
+                foreach (var enemy in state.Enemies)
+                {
+                    if (!enemy.Alive || counted.ExcludingItself && enemy.Id == monster) continue;
+                    if (enemy.NextMoveId == null) return null;
+                    if (enemy.NextMoveId == counted.Move) making++;
+                }
+                return making;
+            }
             case SimCounted.History:
                 if (counted.Query == null) return null;
                 var logged = HistoryCount(state, owner, counted.Query);

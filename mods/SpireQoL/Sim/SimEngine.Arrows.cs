@@ -159,6 +159,7 @@ public static partial class SimEngine
         {
             var copy = place == free.Count - 1 ? state : state.Clone();
             copy.Weight = state.Weight / free.Count;
+            copy.EncounterSlots = null; // the slot it joins in isn't read: the free slots aren't known from here (decision #411)
             copy.Enemies.Add(new SimEnemy
             {
                 Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Monster = spawn.Monster ?? "", Hp = spawn.Hp[index], Powers = SpawnPowers(copy, spawn.Powers),

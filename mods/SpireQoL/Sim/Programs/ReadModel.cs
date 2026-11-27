@@ -2208,6 +2208,7 @@ public sealed class ReadModel : SimModel
                         return One(args.State);
                     }
                     SimEngine.SetMove(enemy, set);
+                    enemy.NextMoveId = null; // set from a property of its own, whose move id isn't read (decision #411)
                     return One(args.State);
                 };
             }

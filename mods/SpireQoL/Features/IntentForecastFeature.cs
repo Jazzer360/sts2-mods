@@ -109,8 +109,12 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         public void MakeKey()
         {
             Pending = Job is { Ready.IsCompleted: false };
-            var rolled = Job is { Ready.IsCompletedSuccessfully: true } ? Job.Projected?.ForecastOf(EnemyId) : null;
-            Shown = rolled is { Count: > 0 } ? (CertainOnly ? rolled.TakeWhile(forecastTurn => forecastTurn.Certain).ToList() : rolled) : Turns;
+            var projected = Job is { Ready.IsCompletedSuccessfully: true } ? Job.Projected : null;
+            var rolled = projected?.ForecastOf(EnemyId);
+            // A roll the projection couldn't tell whose weights ask the board (decision #411) ends the forecast there: never the game's lambdas as they
+            // answer now, before the moves that change what they read.
+            Shown = rolled is { Count: > 0 } || rolled != null && projected!.UnknownRolls.Contains(EnemyId)
+                ? (CertainOnly ? rolled.TakeWhile(forecastTurn => forecastTurn.Certain).ToList() : rolled) : Turns;
             Key = MovesKey + "|" + string.Join("/", Shown.Select((forecastTurn, turn) => string.Join(",", forecastTurn.Moves.Select(move =>
                 move.Move + ":" + (Projected(turn, move.Move) is { } lands ? string.Join(".", lands) : "-")))));
         }

@@ -186,7 +186,7 @@ power ShadowStepPower: AfterSideTurnStart: read
 power ShadowmeldPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
 power ShowOffPower: AfterDeath: gap: changes a game object outside a command (ShowOff.IncreaseAim) | AfterSideTurnEnd: read
 power ShriekPower: AfterDamageReceived: read
-power ShrinkPower: AfterApplied: gap: changes a game object outside a command (Vantom.ScaleTo) | AfterDeath: read | AfterRemoved: unknown where it runs: gap: changes a game object outside a command (Vantom.ScaleTo) | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
+power ShrinkPower: AfterApplied: gap: the value {not this.Owner.Monster.Creature.GetCreatureNode(): null; this.Owner.Monster.Creature.GetCreatureNode(): this.Owner.Monster.Creature.GetCreatureNode().GetSpecialNode<Node2D>("Visuals/ScalingBone")}.CreateTween() | AfterDeath: read | AfterRemoved: unknown where it runs: gap: changes a game object outside a command (Vantom.ScaleTo) | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power ShroudPower: AfterPowerAmountChanged: read
 power SicEmPower: AfterDamageGiven: read | AfterSideTurnEnd: read
 power SignalBoostPower: AfterModifyingCardPlayCount: read | ModifyCardPlayCount: read
