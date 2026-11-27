@@ -1758,7 +1758,12 @@ public static class ProgramReader
         public WaysValue ReturnedWays()
         {
             var ways = new List<(ProgramCondition When, ProgramValue Value)>();
-            foreach (var (at, reached, value) in ReturnWays()) ways.Add((reached, Ops[at].OpCode == OpCodes.Ret ? WithFieldsSet(at, value) : value));
+            foreach (var (at, reached, value) in ReturnWays())
+            {
+                if (Ops[at].OpCode != OpCodes.Ret) { ways.Add((reached, value)); continue; }
+                if (LocalWithFieldsSet(at, reached, value) is { } set) { ways.AddRange(set); continue; }
+                ways.Add((reached, WithFieldsSet(at, value)));
+            }
             return new WaysValue(ways);
         }
 
@@ -1847,6 +1852,51 @@ public static class ProgramReader
                 fields.Add((field, ValueBefore(store)));
             }
             return fields.Count == 0 ? returned : new FieldsSetValue(parameter, fields);
+        }
+
+        /// <summary>
+        /// A local returned with fields the code set on it on some ways (ldloca n; a value; stfld pileType; ...; ldloc n; ret: Mourning Blow's
+        /// GetResultLocationForCardPlay, the base's location with its pile set to your hand when it was the discard pile): a way for each of the
+        /// conditions its stores are reached on holding or not (The Ball's player set with a teammate, its pile too when it was the discard pile),
+        /// with the fields whose stores it reaches. Null when the return doesn't load a local, or no store sets one of its fields; unknown past three
+        /// such conditions.
+        /// </summary>
+        private List<(ProgramCondition When, ProgramValue Value)>? LocalWithFieldsSet(int ret, ProgramCondition reached, ProgramValue returned)
+        {
+            if (ret == 0 || Ops[ret - 1] is not { Slot: { } slot } load || !load.OpCode.Name!.StartsWith("ldloc", StringComparison.Ordinal)
+                || load.OpCode.Name.StartsWith("ldloca", StringComparison.Ordinal)) return null;
+            var stores = new List<int>();
+            for (var i = 0; i < ret; i++)
+            {
+                if (Ops[i].OpCode != OpCodes.Stfld) continue;
+                var value = ReadBack(i, depth: 0);
+                if (value.Start > 0 && Ops[value.Start - 1].OpCode.Name!.StartsWith("ldloca", StringComparison.Ordinal) && Ops[value.Start - 1].Slot == slot) stores.Add(i);
+            }
+            if (stores.Count == 0) return null;
+            if (stores.Any(store => ReachedAt(store) is null or { IsNever: true }))
+                return new List<(ProgramCondition, ProgramValue)> { (reached, new UnknownValue("a local's field set where the way to it isn't read")) };
+            var conditions = stores.Select(store => ReachedAt(store)!).Where(condition => !condition.IsAlways)
+                .GroupBy(condition => condition.ToString()).Select(group => group.First()).ToList();
+            if (conditions.Count > 3) return new List<(ProgramCondition, ProgramValue)> { (reached, new UnknownValue("a local's fields set on too many ways")) };
+            var ways = new List<(ProgramCondition When, ProgramValue Value)>();
+            for (var mask = (1 << conditions.Count) - 1; mask >= 0; mask--)
+            {
+                var when = reached;
+                for (var i = 0; i < conditions.Count; i++) when = when.And((mask & (1 << i)) != 0 ? conditions[i] : conditions[i].Not());
+                if (when.IsNever) continue;
+                var fields = new List<(string Field, ProgramValue Value)>();
+                foreach (var store in stores)
+                {
+                    var on = ReachedAt(store)!;
+                    var index = conditions.FindIndex(condition => condition.ToString() == on.ToString());
+                    if (!on.IsAlways && (mask & (1 << index)) == 0) continue;
+                    var field = Ops[store].Member?.Name ?? "?";
+                    fields.RemoveAll(set => set.Field == field);
+                    fields.Add((field, ValueBefore(store)));
+                }
+                ways.Add((when, fields.Count == 0 ? returned : new FieldsSetValue(returned, fields)));
+            }
+            return ways;
         }
 
         /// <summary>A store with nothing but straight code between it and a return (no branch, no branch target after it).</summary>

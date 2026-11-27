@@ -13,6 +13,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- Mourning Blow and Particle Wall go back into your hand once played, and Shining Strike onto your draw pile's top, as their own code sends them: the preview counted them discarded.
 - Intent Forecast: the Two-Tailed Rat's next intent shows Call for Backup the turn it becomes possible, not a turn late: the chances of its moves are read from its code and worked out after its move counts down its wait, and a rat rolling after another that may call for backup counts that roll.
 - Multi-Cast that kills the last enemy partway through no longer predicts its orb gone: the game stops evoking once the fight is over, so the orb stays.
 - Multi-Cast and other orb evokes on an Axebot with Stock: its next Axebot joins as the evoke kills it, so the evokes after it hit the new one (180 damage, not 90).

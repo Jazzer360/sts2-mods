@@ -57,6 +57,8 @@ public static partial class SimAdapter
             if (aimedAtTeammate < allies.Count) { play.AllyTarget = aimedAtTeammate; ally = allies[aimedAtTeammate].Creature; allyId = Who.Teammate(aimedAtTeammate); }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
+        // Where its own code sends it once played (decision #412: Mourning Blow's hand).
+        (play.OwnResult, play.OwnResultUnknown) = OwnResultLocation(card, me, combat);
         // What it is in the pile it goes to once played (SimPlay.PileProfile, ExhaustProfile: the board read's, decision #392).
         if (play.HandCard != 0 && ids is BoardIds { ProfilesRead: true } board)
         {

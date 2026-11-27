@@ -40,6 +40,12 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
     /// (GetResultLocationForCardPlay) before the listeners change it; its exhaust then is the card that played it's doing (indirect).
     /// </summary>
     public bool ExhaustOnNextPlay { get; init; }
+    /// <summary>
+    /// Where its own code sends it once played, from each of the base's locations (decision #412: SimPlay.OwnResult: Mourning Blow's hand where it
+    /// would be discarded); null: as the base's. A base location missing from it makes the play unknown (OwnResultUnknown).
+    /// </summary>
+    public IReadOnlyDictionary<SimResultLocation, SimResultLocation>? OwnResult { get; init; }
+    public string? OwnResultUnknown { get; init; }
     /// <summary>The card as it lands in its owner's draw or discard pile once played (SimPlay.PileProfile), for a play from your hand; null: not read.</summary>
     public SimDrawCard? PileProfile { get; init; }
     /// <summary>The card as it lands in its owner's exhaust pile once played (SimPlay.ExhaustProfile), where that pile's cards are followed; null: not read.</summary>

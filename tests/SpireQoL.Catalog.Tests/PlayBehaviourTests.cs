@@ -505,10 +505,11 @@ public class PlayBehaviourTests
     }
 
     [Fact]
-    public void MourningBlowTurnsIntoASadnessThatDoesntJoinYourHand()
+    public void MourningBlowTurnsIntoTheSadnessItLeavesInYourHand()
     {
         // MourningBlow.OnPlay sets TransformIntoAfterPlay to a Sadness it makes (on the series' last play): after the play the card itself
-        // becomes it (CardModel.OnPlayWrapper: CardCmd.Transform), where the card went. A made Sadness, not one more card in your hand.
+        // becomes it (CardModel.OnPlayWrapper: CardCmd.Transform), where the card went: back into your hand (its GetResultLocationForCardPlay,
+        // decision #412). A made Sadness, not one more card: your hand holds the Strike and it.
         // The made card is the event's (its class and type), so All Is Well's `card is Sadness` hears it (AllIsWellPower.AfterCardGeneratedForCombat).
         var gameFight = Fight();
         var enemy = Enemy(gameFight);
@@ -518,7 +519,7 @@ public class PlayBehaviourTests
         Power<AllIsWellPower>(gameFight.Me.Creature, amount: 4);
         Power<SmokestackPower>(gameFight.Me.Creature, amount: 3);
         var after = Only(PlayOut(gameFight, card, enemy));
-        Assert.Equal(1, after.You.HandCount);
+        Assert.Equal(2, after.You.HandCount);
         Assert.Equal(1, after.PlayEvents[CardEvent.Generated]);
         Assert.Equal(4, after.You.Block);
         Assert.True(after.Fired.Has(nameof(SmokestackPower)));

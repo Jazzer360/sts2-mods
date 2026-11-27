@@ -2351,7 +2351,7 @@ public static partial class SimAdapter
 
     /// <summary>
     /// The cards a card turns into after its last play (MadeCards.Way.AfterPlay: Mourning Blow's Sadness, CardModel.TransformIntoAfterPlay):
-    /// made once the card play is over (CardCmd.Transform, where the card goes), never into your hand.
+    /// made once the card play is over (CardCmd.Transform, where the card went: your hand for Mourning Blow, decision #412), never a card more.
     /// </summary>
     private static IEnumerable<SimAction> MadeAfterPlay(CardModel card) =>
         MadeCards.Of(card.GetType()).Where(make => make.By == MadeCards.Way.AfterPlay)

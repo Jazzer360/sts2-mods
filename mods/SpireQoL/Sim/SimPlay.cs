@@ -49,6 +49,12 @@ public sealed class SimPlay
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SimDrawCard? PileProfile;
     /// <summary>
+    /// Where its own code sends it once played (decision #412: its GetResultLocationForCardPlay, read from its code), from each of the base's
+    /// locations; null: its class doesn't change it. A base location missing from it is unknown (OwnResultUnknown says why).
+    /// </summary>
+    public IReadOnlyDictionary<SimResultLocation, SimResultLocation>? OwnResult;
+    public string? OwnResultUnknown;
+    /// <summary>
     /// The card as it lands in its owner's exhaust pile once played (its exhausted profile), on a board where that pile's cards are followed one by
     /// one (SimPileAutoPlays.ExhaustCards: Eidolon, Knife Trap), so an auto-play of them later in the simulation can pick it; null where it isn't read.
     /// </summary>
@@ -219,7 +225,8 @@ public sealed class SimScript
         var shorthand = Shorthand(simPlay);
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
         script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true, Upgraded = simPlay.Upgraded,
-            FromPile = fromPile, ExhaustOnNextPlay = exhaustOnNextPlay, PileProfile = simPlay.PileProfile, ExhaustProfile = simPlay.ExhaustProfile });
+            FromPile = fromPile, ExhaustOnNextPlay = exhaustOnNextPlay, PileProfile = simPlay.PileProfile, ExhaustProfile = simPlay.ExhaustProfile,
+            OwnResult = simPlay.OwnResult, OwnResultUnknown = simPlay.OwnResultUnknown });
         script.Actions.AddRange(simPlay.After);
         script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta, BroughtBack = simPlay.BroughtBack, TurnEndLeaving = simPlay.TurnEndLeaving });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)

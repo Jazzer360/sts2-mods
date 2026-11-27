@@ -254,6 +254,12 @@ public static partial class SimEngine
         // exhausts itself or whose ExhaustOnNextPlay was set (Havoc's), else the discard pile.
         var location = play.Card.Type == SimCardType.Power || play.Card.Dupe ? SimResultLocation.Nowhere
             : play.Card.ExhaustsSelf || cardPlayAction.ExhaustOnNextPlay ? SimResultLocation.Exhaust : SimResultLocation.Default;
+        // A card whose own code changes it (decision #412: Mourning Blow and Particle Wall back to your hand, Shining Strike onto your draw pile).
+        if (cardPlayAction.OwnResult is { } own)
+        {
+            if (own.TryGetValue(location, out var its)) location = its;
+            else state.Unmodelled ??= cardPlayAction.OwnResultUnknown ?? "where the card's own code sends it once played isn't read";
+        }
         List<(SimModel Model, int Owner)>? moved = null;
         foreach (var (model, owner) in Listeners(state))
         {
