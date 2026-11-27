@@ -272,6 +272,9 @@ public static class ConditionReader
         // Any(...): the count is above 0.
         if (test is QueryValue { Type: "Enumerable", Name: "Any" } anyQuery)
             return Count(anyQuery, SimCompare.Greater, than: 0, context, at);
+        // A count tested as a true-or-false (if (list.Count == 0) return: Punch of Joy's Sadness): the count is above 0.
+        if (Unstored(test) is QueryValue { Name: "Count" } truthy && IsCount(truthy))
+            return Count(truthy, SimCompare.Greater, than: 0, context, at);
         if (test is CompareValue { Left: var left, Right: var right } compare && Unstored(left) is { } counted && IsCount(counted)
             && Number(right, context) is var number && (number != null || context.Board == null) && IsCardsOwn(right, context))
             return Count(counted, Compared(compare.Op), number ?? 0, context, at);
@@ -409,7 +412,7 @@ public static class ConditionReader
     }
 
     private static bool IsCount(ProgramValue value) =>
-        value is QueryValue { Name: "Count", Type: "Enumerable" } || value is QueryValue { Name: "Count", IsProperty: true, Of: { } counted } && Unstored(counted) is QueryValue { Name: "Cards" };
+        value is QueryValue { Name: "Count", Type: "Enumerable" } || value is QueryValue { Name: "Count", IsProperty: true, Of: { } counted } && (Unstored(counted) is QueryValue { Name: "Cards" } || OfTypeInHand(counted) != null);
 
     private static ConditionReading? Count(ProgramValue query, SimCompare compare, int than, Context context, string? at)
     {
@@ -447,11 +450,28 @@ public static class ConditionReader
     private static HandQueryParts? HandQuery(ProgramValue value)
     {
         value = Unstored(value);
+        // One class of card in your hand (OfType<Sadness>() of its cards, or a list of them: Punch of Joy's): a filter letting that class through.
+        if (value is QueryValue { Name: "Count", IsProperty: true, Of: { } typed } && OfTypeInHand(typed) is { } counted) return counted;
+        if (value is QueryValue { Type: "Enumerable", Name: "Any" or "Count", Arguments: [var typedSource] } && OfTypeInHand(typedSource) is { } asked) return asked;
         if (value is QueryValue { Name: "Count", IsProperty: true, Of: { } cards } && IsHandCards(cards)) return new HandQueryParts(cards, Lambda: null);
         if (value is QueryValue { Type: "Enumerable", Name: "Any" or "Count", Arguments: [var source, ..] } query && IsHandCards(source))
             return new HandQueryParts(source, query.Arguments.Count > 1 ? query.Arguments[1] as LambdaValue : null) is { } parts
                    && (query.Arguments.Count == 1 || parts.Lambda != null) ? parts : null;
         return null;
+    }
+
+    /// <summary>
+    /// OfType&lt;T&gt; of your hand's cards (a list of them: Punch of Joy's Sadness, decision #413) as your hand's cards and a lambda letting T through
+    /// (each is T), so it's counted and followed as any filter of your hand is; null for anything else.
+    /// </summary>
+    private static HandQueryParts? OfTypeInHand(ProgramValue value)
+    {
+        value = Unstored(value);
+        if (value is QueryValue { Name: "ToList" or "ToArray" or "AsEnumerable", Arguments: [var inner] }) return OfTypeInHand(inner);
+        if (value is not QueryValue { Name: "OfType", GenericArguments: [var cardClass], Arguments: [var cards] } || !IsHandCards(cards)) return null;
+        var each = new ParameterValue("each");
+        var isOfClass = new QueryValue(cardClass, "is", each, Array.Empty<ProgramValue>(), "Boolean");
+        return new HandQueryParts(cards, new LambdaValue("each", ProgramCondition.Of(new ConditionLiteral("of-type:" + cardClass, isOfClass, Holds: true))));
     }
 
     /// <summary>Your hand's cards: PileType.Hand's pile of the owner, its Cards; a list of them; them less the card itself.</summary>
