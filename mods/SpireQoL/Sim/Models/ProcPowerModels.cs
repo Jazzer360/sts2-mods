@@ -229,7 +229,8 @@ public sealed class TrashToTreasurePower : ProcModel
 
 /// <summary>
 /// WitheringPresencePower (on an enemy): each card its target plays counts its CardsLeft down (Data); at 0 a Wither (a Status) goes
-/// into their hand (CardPileCmd.AddToCombatAndPreview: bad for you) and the count starts over at 6.
+/// into their hand (CardPileCmd.AddToCombatAndPreview: bad for you) and the count starts over at 6. Made with no creator (its creator argument null),
+/// so no created-card hook hears it as anyone's (Pillar of Creation gives no block for it).
 /// </summary>
 public sealed class WitheringPresencePower : ProcModel
 {
@@ -245,7 +246,7 @@ public sealed class WitheringPresencePower : ProcModel
         if (left <= 0) return One(state);
         left--;
         Set(state, owner, Amount(state, owner), left <= 0 ? 6 : left);
-        return left <= 0 ? MakeInHand(Fire(state, owner), Wither, count: 1, play.Owner) : One(state);
+        return left <= 0 ? MakeInHand(Fire(state, owner), Wither, count: 1, play.Owner, creator: Who.None) : One(state);
     }
 }
 

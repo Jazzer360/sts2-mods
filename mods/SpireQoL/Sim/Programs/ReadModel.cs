@@ -2581,7 +2581,8 @@ public sealed class ReadModel : SimModel
             case HookFact.CostSoFar: return (in HookArgs args) => args.CostSoFar;
             case HookFact.CardPile: return (in HookArgs args) => (int)(args.Costed?.Pile ?? SimCardPile.Other);
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
-            case HookFact.PlayStars: return (in HookArgs args) => args.Play?.Card.Stars ?? 0;
+            // An auto-play pays nothing (CardCmd.AutoPlay: no SpendResources), so its StarsSpent is 0 (Beat Down's Guiding Star sets off no Black Hole).
+            case HookFact.PlayStars: return (in HookArgs args) => args.Play is { AutoPlay: false } play ? play.Card.Stars : 0;
             case HookFact.PlayIsFirst:
             {
                 // Its bit of the play's FirstThisTurn: the first play at all, of a type, with a tag (read once, never per call).

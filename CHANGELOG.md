@@ -13,6 +13,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- Withering Presence's Wither no longer gives Pillar of Creation's block: the game makes it with no creator, so it isn't a card you created.
+- Black Hole no longer hits for a star card another card auto-plays (Beat Down's), which spends no stars.
+- Cosmic Indifference and Photon Cut: a card you put on top of your draw pile could be I Am Invincible, which plays itself from there as your turn ends; the preview shows `?` when one is where the pick takes from, instead of leaving its block out.
+- The play audit no longer reports the cards Purity exhausts as unexplained.
 - The play audit no longer reports your Vigor spent when a skill's discard sets off an attack you picked (Hidden Daggers discarding a Sly Ricochet, which plays itself).
 
 ### Spire QoL 2.0.1

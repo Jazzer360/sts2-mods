@@ -483,7 +483,7 @@ public enum HookFact
     EncounterScaling,
     /// <summary>
     /// The stars the card played spent (cardPlay.Resources.StarsSpent): its card's stars (SimCard.Stars), the same on each play of its card play,
-    /// as the game hands every play the one resources the card was paid with (CardModel.OnPlayWrapper).
+    /// as the game hands every play the one resources the card was paid with (CardModel.OnPlayWrapper); none for an auto-play, which pays nothing.
     /// </summary>
     PlayStars,
     /// <summary>The play is its card play's last (cardPlay.IsLastInSeries: PlayIndex == PlayCount - 1).</summary>

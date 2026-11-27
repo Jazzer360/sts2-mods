@@ -280,6 +280,10 @@ internal static class CardCoverage
         // A card that auto-plays cards from your draw pile: the simulator plays them (which pile position, how many).
         if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()))
             issues.Add("auto-plays cards from your draw pile (not simulated: what they do)");
+        // A card that plays itself from your draw pile's top from its own hooks (I Am Invincible as your turn ends): the simulator follows it
+        // (SimAdapter.ActsFromTopOfDrawPile: its block from the top, and a pick that could put it there is yours, decision #410).
+        if (HookCalls(card.GetType()).Contains("CardPileCmd.AutoPlayFromDrawPile") && !SimAdapter.ActsFromTopOfDrawPile(card))
+            issues.Add("plays from your draw pile's top from its own hooks (not followed: what it does as your turn ends, a pick putting it there)");
         // A card made carries its class and type to the created-card hooks (All Is Well's Sadness, Smokestack's Status): one its code creates
         // that no make carries is a card those hooks can't tell.
         if (Procs.Programs.CardEffects.CreatedNotMade(card.GetType()) is [var notMade, ..])

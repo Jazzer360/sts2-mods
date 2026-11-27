@@ -494,7 +494,7 @@ internal static partial class CoverageLedger
         ["Enthralled"] = "ignore: playability (CanPlay)",
         ["Flatten"] = "ignore: its own cost after Osty attacks (read from the card)",
         ["HowlFromBeyond"] = "covered: AfterAutoPostPlayPhaseEntered auto-plays it from its owner's exhaust pile at the end of the turn: the simulator plays each copy in the auto-play phase, yours and teammates' (their card: SimEngine.AutoPostPlay in player order)",
-        ["IAmInvincible"] = "covered: AfterAutoPostPlayPhaseEntered auto-plays it from the top of your draw pile: the simulator gains its block when every card in its owner's draw pile is a copy of it (otherwise the top is hidden draw order), yours and teammates'; a play that draws the whole pile leaves it uncertain",
+        ["IAmInvincible"] = "covered: AfterAutoPostPlayPhaseEntered auto-plays it from the top of your draw pile: the simulator gains its block when every card in its owner's draw pile is a copy of it (otherwise the top is hidden draw order), yours and teammates'; a play that draws the whole pile leaves it uncertain; a pick putting a card on your draw pile's top from a pile holding it is your decision, unknown (decision #410)",
         ["KinglyKick"] = "ignore: its own cost on draw (read from the card)",
         ["KinglyPunch"] = "ignore: its own cost on draw (read from the card)",
         ["MakeItSo"] = "covered: AfterCardPlayedLate returns it to your hand (from any pile but your hand) when your Skills played this turn reach a multiple of 3: a return tab on the Skill that does it, its count in the relic tracker, and your hand size after (Procs.ReturnToHand; a full hand sends it to the discard pile)",

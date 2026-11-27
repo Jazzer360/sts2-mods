@@ -55,6 +55,20 @@ public class SimMadeInHandTests
     }
 
     [Fact]
+    public void WitheringPresencesWitherIsMadeByNoOne()
+    {
+        // A dev review of the owner's Regent run: WitheringPresencePower.AfterCardPlayed makes its Wither with CardPileCmd.AddToCombatAndPreview(..., creator:
+        // null), so no created-card hook hears it as yours: Pillar of Creation (creator != null && creator.Creature == Owner) gave no block for it.
+        var state = Hand(cards: 5);
+        state.You.Powers = state.You.Powers.With(PowerId.PillarOfCreation, amount: 3);
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.WitheringPresence, amount: 1, data: 1);
+        var after = After(state, Played("DefendSilent", SimCardType.Skill));
+        Assert.Equal(5, after.You.HandCount);
+        Assert.Equal(0, after.You.Block);
+        Assert.False(after.Fired.Has(PowerId.PillarOfCreation.Name));
+    }
+
+    [Fact]
     public void AWitherMadeIntoYourHandBurnsYouAsTheTurnEnds()
     {
         // Decision #364: the Wither's profile read at the board (SimPlayer.MadeCards) joins the cards acting in hand as the turn ends (its 3 damage to you).

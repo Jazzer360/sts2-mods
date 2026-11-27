@@ -154,6 +154,22 @@ public class SimModelEffectTests
     }
 
     [Fact]
+    public void AnAutoPlayedStarCardSpendsNoStarsForBlackHole()
+    {
+        // A dev review of the owner's Regent run: Beat Down auto-played Guiding Star. BlackHolePower.AfterCardPlayed asks cardPlay.Resources.StarsSpent > 0,
+        // and an auto-play pays nothing (CardCmd.AutoPlay: no SpendResources), so Black Hole didn't hit. Played from your hand, it does.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
+        state.You.Powers = state.You.Powers.With(PowerId.BlackHole, amount: 4);
+        SimScript Star(bool autoPlay) => new()
+        {
+            Name = "GuidingStar",
+            Actions = { new CardPlayAction(new SimCardPlay(Card("GuidingStar") with { Stars = 1 }, Who.You, Target: 0, PlayIndex: 0, PlayCount: 1, AutoPlay: autoPlay), new SimAction[] { Attack(baseDamage: 10) }) },
+        };
+        Assert.Equal(36, After(state, Star(autoPlay: false)).Enemy(id: 0)!.Hp);
+        Assert.Equal(40, After(state, Star(autoPlay: true)).Enemy(id: 0)!.Hp);
+    }
+
+    [Fact]
     public void AWarningOnlySomeOutcomesSetOffHasItsChance()
     {
         // Decision #159: a random hit (one of two enemies) wakes the sleeping one half the time: the Asleep warning's chance is 50%,

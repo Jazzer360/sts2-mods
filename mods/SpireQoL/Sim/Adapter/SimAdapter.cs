@@ -423,7 +423,7 @@ public static partial class SimAdapter
                 if (PlaysFromExhaustPile(card)) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, target: Who.None, owner: owner));
             }
             var drawPile = PileType.Draw.GetPile(me).Cards;
-            if (drawPile.Count > 0 && drawPile.All(card => card is IAmInvincible))
+            if (drawPile.Count > 0 && drawPile.All(ActsFromTopOfDrawPile))
             {
                 player.InvincibleBlock = CardBlock(drawPile[0], combat, me);
                 player.InvincibleDrawPile = drawPile.Count;
@@ -681,7 +681,7 @@ public static partial class SimAdapter
                       + $"/{LocalCostOf(card)}/{CostsBeforeModifiersOf(card)}/{keywords.Contains(CardKeyword.Ethereal)}/{card.Affliction?.GetType().Name}"
                     : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
-                var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
+                var invincible = ActsFromTopOfDrawPile(card) ? CardBlock(card, combat, me) : 0;
                 var perfectFit = SimReaders.OnTopWhenShuffled(card);
                 var type = readsType ? SimReaders.TypeOf(card) : SimCardType.None;
                 bool? free = readsCost ? !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0 : null;
@@ -1084,6 +1084,12 @@ public static partial class SimAdapter
         return play;
     }
 
+
+    /// <summary>
+    /// A card that plays itself from your draw pile's top as your turn ends (IAmInvincible.AfterAutoPostPlayPhaseEntered: AutoPlayFromDrawPile when it's
+    /// the pile's first card), gaining its block: the simulator follows its block (SimDrawCard.InvincibleBlock).
+    /// </summary>
+    internal static bool ActsFromTopOfDrawPile(CardModel card) => card is IAmInvincible;
 
     /// <summary>The creature's Simpleton (it auto-plays your cheapest cards): beta only (decision #163); main has no Simpleton.</summary>
     [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]

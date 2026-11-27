@@ -74,6 +74,21 @@ public class SkippablePickTests
     }
 
     [Fact]
+    public void ATakeWhoseCountYouChooseCountsTheMostItCouldTake()
+    {
+        // A dev review of the owner's Regent run: Purity exhausted one card you picked, and the play audit's budget held it to Purity's own exhaust alone.
+        // How many is your choice (decision #406): the play's log counts the most it could take (up to 3 of 4), as an "up to" count is.
+        var purity = new SimPlay { Name = "Purity", TargetId = Who.None };
+        purity.Body.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = CardEvent.Exhausted, Most = 3, ChoosesHowMany = true });
+        var run = SimEngine.Run(Fight(handCount: 4), purity);
+        var branch = Assert.Single(run.Branches);
+        Assert.NotNull(branch.Unmodelled);
+        Assert.Equal(3, branch.Fired[SimKeys.PlayEvent(CardEvent.Exhausted)]);
+        // Two in hand: two at most.
+        Assert.Equal(2, Assert.Single(SimEngine.Run(Fight(handCount: 2), purity).Branches).Fired[SimKeys.PlayEvent(CardEvent.Exhausted)]);
+    }
+
+    [Fact]
     public void AHookThatActsOnACardMadeIsUnknown()
     {
         // Skipped, the game makes no card: AfterCardGeneratedForCombat isn't heard. Trash to Treasure channels an orb for a Status you make.

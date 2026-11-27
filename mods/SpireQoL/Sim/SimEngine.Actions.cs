@@ -376,12 +376,15 @@ public static partial class SimEngine
 
     /// <summary>
     /// A take whose count you choose (TakeFromHandAction.ChoosesHowMany: decision #406) with a card it could take: how many is your later decision, so
-    /// what follows is unknown (the simulation carries why), as Neow's Fury's take into your hand is. None to take: it takes none, certainly.
+    /// what follows is unknown (the simulation carries why), as Neow's Fury's take into your hand is. None to take: it takes none, certainly. The play's
+    /// log counts the most it could take, its "up to" count (Purity's exhausts: the play audit holds the cards it took to that).
     /// </summary>
     private static bool ChosenCount(SimState state, TakeFromHandAction take, int pool)
     {
         if (!take.ChoosesHowMany || pool <= 0 || take.Most <= 0) return false;
         state.Unmodelled ??= "you choose how many cards it takes from your hand";
+        if (take.Event is { } cardEvent)
+            for (var i = 0; i < Math.Min(take.Most, pool); i++) state.LogFired(SimKeys.PlayEvent(cardEvent));
         return true;
     }
 

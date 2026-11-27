@@ -69,10 +69,11 @@ public abstract class ProcModel : SimModel
 
     /// <summary>
     /// Cards made into a player's hand (CardPileCmd.AddGeneratedCardToCombat to PileType.Hand): they join the hand
-    /// (SimEngine.AddToHand), then what reacts to cards made runs (AfterCardGeneratedForCombat), about <paramref name="card"/>.
+    /// (SimEngine.AddToHand), then what reacts to cards made runs (AfterCardGeneratedForCombat), about <paramref name="card"/>, for its creator
+    /// (the player whose hand it joins, unless the code names another: Who.None for a null creator, which no created-card hook hears as anyone's).
     /// </summary>
-    protected IEnumerable<SimState> MakeInHand(IEnumerable<SimState> states, SimCard? card, int count, int player, bool ethereal = false) =>
-        Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal, made: card?.Name); return branch; }).ToList(), CardEvent.Generated, count, player, card);
+    protected IEnumerable<SimState> MakeInHand(IEnumerable<SimState> states, SimCard? card, int count, int player, bool ethereal = false, int? creator = null) =>
+        Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal, made: card?.Name); return branch; }).ToList(), CardEvent.Generated, count, creator ?? player, card);
 
     /// <summary>Channels <paramref name="times"/> orbs of a kind for a player, one after another (OrbCmd.Channel); a random one is a branch per orb.</summary>
     protected static IEnumerable<SimState> Channel(IEnumerable<SimState> states, int player, OrbKind kind, int times)

@@ -2135,7 +2135,9 @@ public static partial class SimAdapter
     /// <summary>
     /// CardPileCmd.Add: into your hand from your piles (HandTakeOf: TakeToHandAction per pile, a choice of how many is unknown); back onto your
     /// draw pile after a pick from your hand (Glimmer, Thinking Ahead: the pick's most); your whole hand moved (Reboot: it leaves, setting
-    /// off nothing). Anything else (a pick from your discard pile onto your draw pile, into a teammate's hand) changes nothing simulated.
+    /// off nothing). Anything else (a pick from your discard pile onto your draw pile, into a teammate's hand) changes nothing simulated, except a pick
+    /// onto your draw pile's top from a pile holding a card that acts from there as your turn ends (I Am Invincible: Cosmic Indifference from your
+    /// discard pile, Photon Cut from your hand): which card goes there is your later decision, so what follows is unknown (PickOntoTopUnknown).
     /// </summary>
     private static (List<SimAction> Actions, ProgramCondition? Guard) AddsFrom(CardEffects.Found found, StepPlay play)
     {
@@ -2154,6 +2156,7 @@ public static partial class SimAdapter
         }
         var pile = Argument(command, 1);
         var drawPile = ((int)PileType.Draw).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (pile == drawPile && found.Pick != null && PickMayTopWithACardActingThere(command, found, play)) actions.Add(new NotModelledAction(PickOntoTopUnknown));
         if (pile == drawPile && found.Pick is { Command.Name: "FromHand" } pick)
         {
             var take = new CardEffects.CardsTaken(command, found.Condition, CardEffects.TakeWay.Picked, Items: null, pick);
@@ -2166,6 +2169,27 @@ public static partial class SimAdapter
             return (actions, null);
         }
         return (actions, null);
+    }
+
+    internal const string PickOntoTopUnknown = "you choose which card goes on top of your draw pile, and one you could pick plays itself from there as your turn ends";
+
+    /// <summary>
+    /// A pick put on your draw pile's top (CardPileCmd.Add's position Top, or one not read) could be a card that acts from there as your turn ends
+    /// (ActsFromTopOfDrawPile): one in the pile it picks from (your hand: the cards in it but the one played; a pile not read: hand, draw and discard).
+    /// A card the play draws before a pick from your hand could be one too (Photon Cut): your draw pile's cards count then.
+    /// </summary>
+    private static bool PickMayTopWithACardActingThere(CommandStep command, CardEffects.Found found, StepPlay play)
+    {
+        var top = ((int)CardPilePosition.Top).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (Argument(command, 2) is { } position && position != top && int.TryParse(position, out _)) return false;
+        var from = new CardEffects.CardsTaken(command, found.Condition, CardEffects.TakeWay.Picked, Items: null, found.Pick).PickPile;
+        var piles = from switch
+        {
+            PileType.Hand => play.Card != null && CardEffects.DrawsForYou(play.Card.GetType()).Count > 0 ? new[] { PileType.Hand, PileType.Draw } : new[] { PileType.Hand },
+            { } pileType => new[] { pileType },
+            null => new[] { PileType.Hand, PileType.Draw, PileType.Discard },
+        };
+        return piles.Any(pileType => pileType.GetPile(play.Me).Cards.Any(card => card != play.Card && ActsFromTopOfDrawPile(card)));
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -150,5 +151,36 @@ public class DevReviewAdapterTests
         var play = SimAdapter.Play(claw, fight.Me, fight.Combat, ids, targetId: ids[enemy], plays: 1);
         var attack = Assert.Single(play.Body.OfType<AttackAction>());
         Assert.Equal(3m, attack.Damage.GrowsEachPlay);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void APickOntoYourDrawPilesTopIsYoursWhenACardThereActsAsTheTurnEnds(bool invincibleInDiscard)
+    {
+        // The owner's Regent run: Cosmic Indifference put the I Am Invincible you picked from your discard pile on top of your draw pile, where it plays
+        // itself as your turn ends (10 block); the preview had the pick change nothing. Which card goes there is your later decision: with a card in the
+        // pile it picks from that acts from the top, unknown. Without one, the pick changes nothing the simulation follows.
+        var fight = new GameFight();
+        var cosmic = fight.Add<CosmicIndifference>();
+        fight.Add<StrikeRegent>(PileType.Discard);
+        if (invincibleInDiscard) fight.Add<IAmInvincible>(PileType.Discard);
+        SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        var play = SimAdapter.Play(cosmic, fight.Me, fight.Combat, ids, targetId: Who.None);
+        Assert.Equal(invincibleInDiscard, play.Body.OfType<NotModelledAction>().Any());
+    }
+
+    [Fact]
+    public void PhotonCutsPickFromYourHandOntoYourDrawPileIsYoursWithIAmInvincibleInHand()
+    {
+        // The same run: Photon Cut put the I Am Invincible you picked from your hand on top of your draw pile.
+        var fight = new GameFight();
+        var photon = fight.Add<PhotonCut>();
+        fight.Add<IAmInvincible>();
+        var enemy = fight.Combat.CreateCreature(ModelDb.Monster<Seapunk>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(enemy);
+        SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        var play = SimAdapter.Play(photon, fight.Me, fight.Combat, ids, targetId: ids[enemy]);
+        Assert.Contains(play.Body, action => action is NotModelledAction);
     }
 }
