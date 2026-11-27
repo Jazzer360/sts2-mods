@@ -59,6 +59,23 @@ public class DevReviewAdapterTests
     }
 
     [Fact]
+    public void SimpletonInHandHasYourHandReadForTheAutoPlayItGives()
+    {
+        // The owner's Fool run: Simpleton's play gives SimpletonPower, whose AfterAutoPostPlayPhaseEntered auto-plays your cheapest card as this turn
+        // ends. With no Simpleton on you yet, the board reads your hand for it all the same, and the play lands the power the simulator acts on.
+        var fight = new GameFight();
+        var simpleton = fight.Add<Simpleton>();
+        fight.Add<StrikeDefect>();
+        var enemy = fight.Combat.CreateCreature(ModelDb.Monster<Seapunk>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(enemy);
+        var state = SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        Assert.Equal(0, state.You.Simpleton);
+        Assert.Contains(state.You.AutoHand!, card => card.Name == nameof(StrikeDefect));
+        var play = SimAdapter.Play(simpleton, fight.Me, fight.Combat, ids, targetId: Who.None);
+        Assert.Contains(play.Body.OfType<ApplyPowerAction>(), action => action.Power == PowerId.Simpleton && action.Amount == 1);
+    }
+
+    [Fact]
     public void ClawCarriesItsGrowthForAReplayTheSimulatorDecides()
     {
         // Echo Form's replay is decided as the play starts (CardPlayAction.CountByModels), so the play read now has one play: Claw's growth (its Increase

@@ -34,7 +34,8 @@ public static partial class SimEngine
     /// powers, then their relics, then the cards in their piles: SimPlayer.Cards), then each enemy (its powers). Only modelled names;
     /// with each one's owner. A dead enemy's powers aren't listening: the game removes a creature's powers at its death
     /// (Creature.RemoveAllPowersAfterDeath, in CreatureCmd.Kill), for every model, so no model asks whether its owner lives. The hit that
-    /// killed it and its own death are told to them still (<see cref="ListenersWith"/>): the game runs both before the removal. A power
+    /// killed it and its own death are told to them still (<see cref="ListenersWith"/>): the game runs both before the removal; on beta, so is the
+    /// rest of a move it died during (SimState.PerformingMove). A power
     /// that stays past its owner's death (it overrides ShouldPowerBeRemovedAfterOwnerDeath) is never modelled (DeathListenerTests).
     /// </summary>
     internal static List<(SimModel Model, int Owner)> Listeners(SimState state)
@@ -55,20 +56,24 @@ public static partial class SimEngine
     /// AfterDamageGiven, AfterDamageReceived) and its own AfterDeath are told to, as the game tells them before its powers go.
     /// </summary>
     internal static List<(SimModel Model, int Owner)> ListenersWith(SimState state, int dead) =>
-        state.Enemy(dead) is { Alive: false } && AnyModelled(state) ? BuildListeners(state, kinds: null, alsoDead: dead) : Listeners(state);
+        state.Enemy(dead) is { Alive: false } enemy && !Listening(state, enemy, alsoDead: null) && AnyModelled(state) ? BuildListeners(state, kinds: null, alsoDead: dead) : Listeners(state);
 
-    /// <summary>The enemies dead now, a bit per place in SimState.Enemies (a fight never has 64: past that, the last bit stands for the rest).</summary>
+    /// <summary>The enemies not listening now (dead, past any move of theirs still running), a bit per place in SimState.Enemies (a fight never has 64: past that, the last bit stands for the rest).</summary>
     private static ulong DeadMask(SimState state)
     {
         ulong mask = 0;
         var enemies = state.Enemies;
         for (var index = 0; index < enemies.Count; index++)
-            if (!enemies[index].Alive) mask |= 1UL << Math.Min(index, 63);
+            if (!Listening(state, enemies[index], alsoDead: null)) mask |= 1UL << Math.Min(index, 63);
         return mask;
     }
 
-    /// <summary>An enemy's powers are listening: it lives, or it's the one whose killing hit or death is being told (ListenersWith).</summary>
-    private static bool Listening(SimEnemy enemy, int? alsoDead) => enemy.Alive || enemy.Id == alsoDead;
+    /// <summary>
+    /// An enemy's powers are listening: it lives, it's the one whose killing hit or death is being told (ListenersWith), or it died during its own
+    /// move, which is still running (SimState.PerformingMove: beta keeps its powers to the move's end, MainRule.PowersGoAtDeath takes them at its death).
+    /// </summary>
+    private static bool Listening(SimState state, SimEnemy enemy, int? alsoDead) =>
+        enemy.Alive || enemy.Id == alsoDead || enemy.Id == state.PerformingMove && (state.MainRules & MainRule.PowersGoAtDeath) == 0;
 
     /// <summary>The listeners as the order test reads them (ListenerOrderTests): each one's kind, name and owner, in listener order.</summary>
     internal static List<(ListenerKind Kind, string Name, int Owner)> ListenerOrder(SimState state)
@@ -140,7 +145,7 @@ public static partial class SimEngine
             foreach (var kind in PetKinds) Add(player.PetPowers(kind).Items.Select(entry => entry.Name.Name), Who.PetOf(id, kind), ListenerKind.Power);
         }
         foreach (var enemy in state.Enemies)
-            if (Listening(enemy, alsoDead)) Add(enemy.Powers.Items.Select(entry => entry.Name.Name), enemy.Id, ListenerKind.Power);
+            if (Listening(state, enemy, alsoDead)) Add(enemy.Powers.Items.Select(entry => entry.Name.Name), enemy.Id, ListenerKind.Power);
         return list;
     }
 

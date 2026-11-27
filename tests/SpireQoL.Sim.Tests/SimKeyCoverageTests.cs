@@ -28,14 +28,14 @@ public class SimKeyCoverageTests
         ["SimPlayer.PotionSlots"] = "the same in every branch: the belt's slots are read from the board and nothing in a fight changes them",
         ["SimState.CardPlaysStarted"] = "a card play's identity within the run (SimCardPlay.Serial): what a model binds is keyed by it, and every bound entry is scratch",
         // Read from the game once and never changed.
-        ["SimState.Vars"] = Constant, ["SimState.Fractions"] = Constant, ["SimState.TurnNumber"] = Constant, ["SimState.RoundNumber"] = Constant, ["SimState.Dread"] = Constant, ["SimState.HeldOpenByTheDead"] = Constant, ["SimState.RemovedByItsHook"] = Scratch, ["SimState.KillsNotYetRun"] = Scratch, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant, ["SimState.CostsUnknown"] = Constant,
+        ["SimState.Vars"] = Constant, ["SimState.Fractions"] = Constant, ["SimState.TurnNumber"] = Constant, ["SimState.RoundNumber"] = Constant, ["SimState.Dread"] = Constant, ["SimState.HeldOpenByTheDead"] = Constant, ["SimState.RemovedByItsHook"] = Scratch, ["SimState.KillsNotYetRun"] = Scratch, ["SimState.PerformingMove"] = Scratch, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant, ["SimState.CostsUnknown"] = Constant,
         ["SimEnemy.Name"] = Constant, ["SimEnemy.Monster"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.SetMoves"] = Constant,
         ["SimEnemy.StartedAlive"] = Constant, ["SimEnemy.AddedBy"] = "set as a creature a death adds joins, beside its Id (in the key), and never changed",
         ["SimEnemy.Intent"] = SetByAMove, ["SimEnemy.TeammateHits"] = SetByAMove, ["SimEnemy.Move"] = SetByAMove,
         ["SimEnemy.PoisonTriggers"] = Constant, ["SimEnemy.DeathSetsOffFatal"] = Constant,
         ["SimPlayer.SlotOnFirstChannel"] = Constant,
         ["SimPlayer.OstyShields"] = Constant, ["SimPlayer.FairyHeal"] = Constant, ["SimPlayer.BeaconOfHope"] = Constant,
-        ["SimPlayer.Stampede"] = Constant, ["SimPlayer.Simpleton"] = Constant, ["SimPlayer.ExhaustAutoPlays"] = Constant,
+        ["SimPlayer.ExhaustAutoPlays"] = Constant,
         ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant, ["SimPlayer.Cards"] = Constant,
         // Per-play results, merged.
         ["SimState.PlayHpReached"] = Merged, ["SimState.PlayHpLosses"] = Merged, ["SimState.PlayHpLost"] = Merged,
@@ -79,6 +79,7 @@ public class SimKeyCoverageTests
     private static object? Changed(object? v, Type type)
     {
         if (type == typeof(int)) return (int)v! == int.MaxValue ? 5 : (int)v! + 7;
+        if (type == typeof(int?)) return v is int value ? value + 7 : 3;
         if (type == typeof(long)) return (long)v! + 7;
         if (type == typeof(double)) return (double)v! + 0.5;
         if (type == typeof(bool)) return !(bool)v!;

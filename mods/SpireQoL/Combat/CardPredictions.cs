@@ -110,15 +110,34 @@ public sealed class CardPredictions
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
         var sources = Sources(me, combat);
 
-        var pending = new List<(CardModel Card, Prepared Prepared)>();
-        foreach (var card in hand)
+        List<(CardModel Card, Prepared Prepared)> pending;
+        if (key != 0 && key == _preparedKey && !checkReuse)
         {
-            // Nothing happens on play for a card that can't be played (Unplayable statuses and
-            // curses, blocked cards, cards whose own condition isn't met). Cards you just can't
-            // afford yet still show, since energy can come mid-turn.
-            if (!CardPlays.CanPlayThisTurn(card)) continue;
-            if (Prepare(card, sources, record: true) is not { } prepared) continue;
-            pending.Add((card, prepared));
+            // The board and hand last frame had, with searches of theirs still running (decision #405): last frame's predictions and searches
+            // again, each card's play not read again, each prediction kept for this frame as Prepare keeps it (its pending mark set again by Finish).
+            pending = _prepared;
+            foreach (var (card, prepared) in pending)
+            {
+                prepared.F.SimPending = false;
+                _predictions[card] = prepared.F;
+                _lastPredictions[card] = prepared.F;
+            }
+            _predictionsFrame = Godot.Engine.GetProcessFrames();
+        }
+        else
+        {
+            pending = new List<(CardModel Card, Prepared Prepared)>();
+            foreach (var card in hand)
+            {
+                // Nothing happens on play for a card that can't be played (Unplayable statuses and
+                // curses, blocked cards, cards whose own condition isn't met). Cards you just can't
+                // afford yet still show, since energy can come mid-turn.
+                if (!CardPlays.CanPlayThisTurn(card)) continue;
+                if (Prepare(card, sources, record: true) is not { } prepared) continue;
+                pending.Add((card, prepared));
+            }
+            _preparedKey = key;
+            _prepared = pending;
         }
 
         // Every card's simulations (one per target) and the forecast's run in parallel across CPU cores, all started before any wait
@@ -158,6 +177,7 @@ public sealed class CardPredictions
         if (checkReuse) CheckReuse(shown);
         // Reusable only once every result is final: a pending simulation or forecast changes the tabs with nothing else changing.
         _reuseKey = final ? key : 0;
+        if (final) _preparedKey = 0;
         _reuseTabs = shown;
         return result;
     }
@@ -165,6 +185,9 @@ public sealed class CardPredictions
     // ------------------------------------------------------------------ reuse while nothing changes (decision #114)
 
     private long _reuseKey;
+    /// <summary>The frame key the cards were last prepared for, while a search of theirs ran (0: none), and what they were prepared as.</summary>
+    private long _preparedKey;
+    private List<(CardModel Card, Prepared Prepared)> _prepared = new();
     private List<(CardModel Card, List<TabSpec> Tabs)> _reuseTabs = new();
     private readonly ReuseCheck _reuse = new("the card predictions");
 

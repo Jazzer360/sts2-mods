@@ -409,6 +409,9 @@ public sealed class TurnEndModel
                 ? same
                 : _reusedStart = new ForecastStart(reused.State, reused.StateKey, reused.FullState, reused._fullKey, reused.Ids, reused.Teammates, reused._myHp, probe, lastJob, reused);
         var probeCheck = reuse == FrameReuse.WorkOutAndCheck ? _lastModel : null;
+        // Nothing a prediction reads changed since last frame and its search is still running (decision #405): last frame's start again, with
+        // that search, without reading the board again (a board with Simpleton on you reads every card of your draw pile's play).
+        if (!ownBudget && _pendingStart is { } pendingStart && pendingStart.Probe == probe && !pendingStart.Job.Ready.IsCompleted) return pendingStart;
 
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
         DrawPileMemory.Update(me, combat);
@@ -422,7 +425,9 @@ public sealed class TurnEndModel
         // The live cost rule held to the game's costs once a board (decision #334).
         if (key != _lastKey) Diagnostics.HandCostAudit.Check(me, full);
         var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
-        return new ForecastStart(state, key, full, fullKey, ids, SimAdapter.Teammates(me, combat), me.Creature.CurrentHp, probe, job, Reused: null);
+        var begun = new ForecastStart(state, key, full, fullKey, ids, SimAdapter.Teammates(me, combat), me.Creature.CurrentHp, probe, job, Reused: null);
+        if (!ownBudget) _pendingStart = begun;
+        return begun;
     }
 
     /// <summary>
@@ -483,6 +488,8 @@ public sealed class TurnEndModel
     private static readonly ReuseCheck ForecastReuse = new("the turn forecast");
     /// <summary>The start BeginNow last handed back for a reused model (kept while the model and the probe stay the same).</summary>
     private static ForecastStart? _reusedStart;
+    /// <summary>The start BeginNow last read the board for (the display's), handed back while its search runs and the board probe stays the same.</summary>
+    private static ForecastStart? _pendingStart;
 
     /// <summary>
     /// The turn as it would go after playing a card (Play Preview): the same view built from that card's outcome at its aim, which

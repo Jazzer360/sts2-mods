@@ -22,13 +22,16 @@ public static partial class SimAdapter
 {
 
     /// <summary>
-    /// Your powers the simulator tracks that aren't read from their code (Juggernaut, Accelerant). One read from its code (Feel No Pain,
+    /// Your powers the simulator tracks that aren't read from their code (Juggernaut, Accelerant, Stampede, Simpleton). One read from its code (Feel No Pain,
     /// Thorns, Flame Barrier: decision #281; Plating: decision #289) is simulated as any read model is, its amount the card's step's.
     /// </summary>
     internal static readonly HashSet<string> SelfPowers = new()
     {
         nameof(JuggernautPower),
         nameof(AccelerantPower),
+        // The end-of-turn auto-plays from your hand: a play that gives one sets it off as the turn ends (SimEngine.AutoPostPlay).
+        PowerId.Stampede.Name,
+        PowerId.Simpleton.Name,
     };
 
     /// <summary>
@@ -381,7 +384,11 @@ public static partial class SimAdapter
             // A card of yours upgrading every card in your hand (decision #363): each hand card's upgraded play read too (SimHandCard.Upgraded).
             var handUpgraded = owner == Who.You && PilesYourCardsUpgrade(me).HasFlag(UpgradedPiles.Hand);
             if (sources.Count > 0) player.PileAutoPlays = new SimPileAutoPlays(sources.Where(source => source.Readable).Select(source => source.Key).ToList()) { FromHand = fromHand };
-            if (player.Stampede > 0 || player.Simpleton > 0 || fromHand)
+            // A card in the hand whose play gives Stampede or Simpleton (the Simpleton card): its play sets the auto-play off as this turn ends, from
+            // the hand as it stands then, so the hand's cards are read for it as they would be with the power on.
+            var given = GivenFromHand(me);
+            var simpleton = player.Simpleton > 0 || given.Simpleton;
+            if (player.Stampede > 0 || simpleton || given.Stampede || fromHand)
             {
                 player.AutoHand = new List<SimHandCard>();
                 foreach (var card in Sts2State.Hand(me))
@@ -389,7 +396,7 @@ public static partial class SimAdapter
                     if (card.Keywords.Contains(CardKeyword.Unplayable))
                     {
                         // With Simpleton, Mummified Hand's free card can be one of these (it picks among your whole hand: decision #393): its costs, no plays.
-                        if (player.Simpleton > 0)
+                        if (simpleton)
                             (player.UnplayableHand ??= new()).Add(new SimHandCard
                             {
                                 Id = HandId(card), Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack,
@@ -429,6 +436,19 @@ public static partial class SimAdapter
             player.Stampede = player.Simpleton = 0;
             player.PileAutoPlays = null; // a card's auto-play of your piles' cards is unknown then (AutoPlayCardsAction: not read)
         }
+    }
+
+    /// <summary>The end-of-turn auto-plays a card in the hand gives as it plays (PowerCmd.Apply of StampedePower or SimpletonPower in its OnPlay).</summary>
+    private static (bool Stampede, bool Simpleton) GivenFromHand(Player me)
+    {
+        bool stampede = false, simpleton = false;
+        foreach (var card in Sts2State.Hand(me))
+            foreach (var power in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
+            {
+                stampede |= power.Name == PowerId.Stampede.Name;
+                simpleton |= power.Name == PowerId.Simpleton.Name;
+            }
+        return (stampede, simpleton);
     }
 
     /// <summary>

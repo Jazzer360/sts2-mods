@@ -40,9 +40,16 @@ internal static class BranchRules
         "(combatState.CurrentSide == CombatSide.Enemy); main's sets it whenever one lands there, so a Weak, Vulnerable or Frail landing on you during " +
         "your own turn keeps its stack through the enemies' turn end on main and ticks down there on beta");
 
+    public static readonly BranchRule PowersStayThroughTheDyingMove = new(nameof(PowersStayThroughTheDyingMove),
+        new CodeFact(typeof(MegaCrit.Sts2.Core.Models.MonsterModel), nameof(MegaCrit.Sts2.Core.Models.MonsterModel.PerformMove), nameof(MegaCrit.Sts2.Core.Entities.Creatures.Creature.RemoveAllPowersAfterDeath)),
+        OnBeta: true, MainRule.PowersGoAtDeath,
+        "beta's CreatureCmd.Kill leaves a creature's powers on it while its move runs (IsPerformingMove) and MonsterModel.PerformMove takes them off once " +
+        "the move ends; main's Kill takes them off as it dies: a Bowlbug Rock your Thorns kills during its attack still hears its hit fully blocked " +
+        "(Imbalanced's AfterDamageGiven) on beta, and doesn't on main");
+
     public static IReadOnlyList<BranchRule> All { get; } = new[]
     {
-        OmnisliceSplashIsPowered, DamageWorkedOutFirst, DebuffTickSkippedOnTheEnemiesTurnOnly,
+        OmnisliceSplashIsPowered, DamageWorkedOutFirst, DebuffTickSkippedOnTheEnemiesTurnOnly, PowersStayThroughTheDyingMove,
     };
 
     private static readonly ConcurrentDictionary<BranchRule, bool> Beta = new();

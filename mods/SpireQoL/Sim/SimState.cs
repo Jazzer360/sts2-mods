@@ -25,6 +25,11 @@ public enum MainRule
     /// any side's turn; beta, v0.114.0: only during the enemies' turn, CombatState.CurrentSide == CombatSide.Enemy).
     /// </summary>
     DebuffSkipsTickOnAnyTurn = 16,
+    /// <summary>
+    /// A creature's powers go as it dies, during its own move too (CreatureCmd.Kill's RemoveAllPowersAfterDeath; beta, v0.114.0: an enemy killed
+    /// while its move runs keeps them, and the rest of its move's hooks are told to them, until MonsterModel.PerformMove takes them off at its end).
+    /// </summary>
+    PowersGoAtDeath = 32,
 }
 
 /// <summary>A side of the fight whose turn is ending (SimState.SideEnding): none, the players' or the enemies'.</summary>
@@ -670,11 +675,14 @@ public sealed class SimPlayer
 
     // The auto-play phase (PlayerTurnPhase.AutoPostPlay: Hook.AfterAutoPostPlayPhaseEntered, before BeforeSideTurnEnd), every
     // player's. A teammate's Stampede and Simpleton aren't filled (their hand; decision #80); their piles' auto-plays are.
-    /// <summary>Stampede: auto-plays this many random Attacks from your hand (StampedePower; 0 = none).</summary>
-    public int Stampede;
-    /// <summary>Simpleton: auto-plays this many of your cheapest cards (a random one among ties; SimpletonPower; 0 = none).</summary>
-    public int Simpleton;
-    /// <summary>Your playable cards in hand, for Stampede and Simpleton to pick from (null when you have neither).</summary>
+    /// <summary>
+    /// Stampede: auto-plays this many random Attacks from your hand (StampedePower; 0 = none). Kept as the power, so a play that gives it (the Stampede
+    /// card) sets it off at this turn's end.
+    /// </summary>
+    [JsonIgnore] public int Stampede { get => Powers[PowerId.Stampede]; set => Set(PowerId.Stampede, value); }
+    /// <summary>Simpleton: auto-plays this many of your cheapest cards (a random one among ties; SimpletonPower; 0 = none). Kept as the power, as Stampede.</summary>
+    [JsonIgnore] public int Simpleton { get => Powers[PowerId.Simpleton]; set => Set(PowerId.Simpleton, value); }
+    /// <summary>Your playable cards in hand, for Stampede and Simpleton to pick from (null when you have neither, and no card in your hand gives one).</summary>
     public List<SimHandCard>? AutoHand;
     /// <summary>
     /// Your Unplayable cards in hand, by their costs (no plays), with Simpleton: Mummified Hand picks among your whole hand (SimEngine.FreeInHand), so one
@@ -1162,6 +1170,12 @@ public sealed class SimState
     /// The engine's scratch: set and cleared inside the round.
     /// </summary>
     public bool KillsNotYetRun;
+    /// <summary>
+    /// The enemy whose move is running (MonsterModel.IsPerformingMove), or null: killed during it (your Thorns hitting back), its powers still listen
+    /// until the move ends (beta's CreatureCmd.Kill leaves them on it; MonsterModel.PerformMove takes them off after the move), unless main's rule
+    /// takes them at its death (MainRule.PowersGoAtDeath). The engine's scratch: set and cleared around each move.
+    /// </summary>
+    public int? PerformingMove;
 
     /// <summary>
     /// The history ledger's questions (decision #191): every query of the game's log of the fight that the cards, relics and powers on this

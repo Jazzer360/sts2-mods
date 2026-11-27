@@ -197,6 +197,30 @@ public class SimAutoPlayTests
     }
 
     [Fact]
+    public void APlayThatGivesSimpletonPlaysYourCheapestCardAsTheTurnEnds()
+    {
+        // A dev review report: playing Simpleton (PowerCmd.Apply<SimpletonPower> on you) showed the turn's end without its auto-play. The power the
+        // play gives is the power SimpletonPower.AfterAutoPostPlayPhaseEntered reads as this turn ends: the 0-cost Strike kills the enemy.
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 6, hits: 4) } };
+        state.You.AutoHand = new() { Defend(id: 12, block: 5, cost: 1), StrikeCard(id: 11, damage: 6, cost: 0, targets: 1) };
+        var simpleton = ScriptBuilder.Play(ScriptBuilder.Card("Simpleton", SimCardType.Power), target: Who.None, plays: 1,
+            new ApplyPowerAction(PowerId.Simpleton, Amount: 1) { To = ApplyPowerAction.Where.You });
+        Assert.False(SimEngine.Run(state).DeadInAny(enemyId: 1));
+        var outcome = SimEngine.Run(state, simpleton);
+        Assert.True(outcome.DeadInAll(enemyId: 1));
+        Assert.Equal(0, outcome.TakenMax);
+    }
+
+    [Fact]
+    public void AnAutoPlayDueFromAHandNotReadIsUnknown()
+    {
+        // Simpleton on you with no hand read for it (a card made during the turn gave it): unknown, never no auto-play.
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 6, hits: 4) } };
+        state.You.Simpleton = 1;
+        Assert.All(SimEngine.Run(state).Branches, branch => Assert.NotNull(branch.Unmodelled));
+    }
+
+    [Fact]
     public void SimpletonPicksAtRandomAmongTies()
     {
         // Strike or Defend, both 1: a kill in one branch, 5 block in the other (4 taken at worst, 0 at best).

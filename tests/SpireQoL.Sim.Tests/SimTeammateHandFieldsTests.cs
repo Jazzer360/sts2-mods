@@ -23,8 +23,8 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
         nameof(SimPlayer.ExhaustingInHand), // Drum of Battle: which of their cards a play could exhaust
         nameof(SimPlayer.Cards),           // the cards in their piles that listen for hooks (their hand's among them: a Regret)
-        // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
-        nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand), nameof(SimPlayer.UnplayableHand),
+        // End-of-turn auto-plays picked from the hand (Stampede and Simpleton, kept as their powers, which WithoutTeammateHands clears: decision #80).
+        nameof(SimPlayer.AutoHand), nameof(SimPlayer.UnplayableHand),
         nameof(SimPlayer.PileAutoPlays), // the auto-plays of cards in their piles their hand's cards make (decision #360; never filled for a teammate today)
     };
 

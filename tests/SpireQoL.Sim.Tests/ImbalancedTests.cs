@@ -95,6 +95,25 @@ public class ImbalancedTests
     }
 
     [Fact]
+    public void YourThornsKillingItDuringItsAttackLeavesItsPowerListeningToTheMovesEnd()
+    {
+        // A dev review report: Thorns 2 killed the 2-HP Bowlbug Rock before its 16 landed (ThornsPower.BeforeDamageReceived), and your block took
+        // the 16 whole. Beta's CreatureCmd.Kill keeps a creature's powers while its move runs (IsPerformingMove: MonsterModel.PerformMove removes
+        // them once it ends), so Imbalanced's AfterDamageGiven still hears the hit: set off, on a dead Bowlbug, whose stun stuns nothing.
+        var imbalanced = PowerId.Imbalanced.Name;
+        var state = Fight(yourBlock: 21, hits: 16);
+        state.Enemies[0].Hp = 2;
+        state.You.Thorns = 2;
+        var outcome = SimEngine.Run(state);
+        Assert.All(outcome.Branches, branch => Assert.False(branch.Enemy(0)!.Alive)); // its hit still landed: it acted, not dead before acting
+        Assert.True(outcome.FlashedInAll(imbalanced, owner: 0));
+        Assert.False(outcome.StunnedInAll(enemyId: 0));
+        // Main's CreatureCmd.Kill takes its powers off as it dies (MainRule.PowersGoAtDeath): the hit that lands after is told to no Imbalanced.
+        state.MainRules = MainRule.PowersGoAtDeath;
+        Assert.False(SimEngine.Run(state).FlashedInAny(imbalanced, owner: 0));
+    }
+
+    [Fact]
     public void ABlockPlayThatTakesItsHitWholeHasItsTabAfterThePlay()
     {
         var state = Fight(yourBlock: 0, hits: 6);

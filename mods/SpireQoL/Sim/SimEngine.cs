@@ -1500,7 +1500,12 @@ public static partial class SimEngine
     {
         var yours = player == Who.You;
         var hand = state.Player(player)!.AutoHand;
-        if (hand == null) return new[] { state };
+        if (hand == null)
+        {
+            // A pick is due from a hand the board never read for one (a card made during the turn gave the power): unknown, never no play.
+            state.Unmodelled ??= "an end-of-turn auto-play from a hand not read for it";
+            return new[] { state };
+        }
         if (state.AutoPlaysUnknown)
         {
             // A pick is due from a hand the simulator lost track of (a card made or brought back cards, one drawn can't be played).
@@ -1851,6 +1856,8 @@ public static partial class SimEngine
                 continue;
             }
             if (HitCount(enemy) == 0 && enemy.Move == null) continue;
+            // Its move runs (MonsterModel.PerformMove's IsPerformingMove): killed during it, its powers listen to the move's end on beta.
+            state.PerformingMove = enemy.Id;
 
             var landed = 0;
             var hitsLanded = 0;
@@ -1959,6 +1966,7 @@ public static partial class SimEngine
                     if (action is WhenAction { AskedAtMoveStart: true } early) (askedAtStart ??= new Dictionary<WhenAction, bool?>(ReferenceEqualityComparer.Instance))[early] = Holds(state, early.Condition, enemy.Id);
                 MoveActions(enemy.Move);
             }
+            state.PerformingMove = null;
             if (landed > 0) if (state.Log) state.Blockable.Add((hitsLanded > 1 ? $"{enemy.Name} ({hitsLanded} hits)" : enemy.Name, landed));
             // An enemy killed during the enemy turn (your Thorns, Flame Barrier or Reflect hitting back during its attack): its death hooks ran
             // as it died (the damage on it ends in CreatureCmd.Kill); any left run before the next enemy moves. Poison deaths ran theirs at the
