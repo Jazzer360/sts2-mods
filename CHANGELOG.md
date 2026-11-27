@@ -8,6 +8,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 2.0.2
 #### Changed
+- Intent Details and Intent Forecast: the buffs and debuffs a move applies sit in the top-left corner of their intent, larger, so they no longer cover an attack's damage (a multi-hit's `9x5`).
 - Session summaries count the frames during fights where the mod took longer than a frame at 165 fps (6 ms): how many, the longest run of them, which part of the mod took the time, and the fights' frame rate.
 
 #### Fixed

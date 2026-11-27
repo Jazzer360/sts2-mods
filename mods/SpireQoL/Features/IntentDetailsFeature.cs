@@ -15,13 +15,13 @@ namespace SpireQoL.Features;
 /// <summary>
 /// Intent Details (decision #98): on each enemy's intent on screen, during your turn, what its move does that the intent doesn't
 /// say: the block it gains, as a number on its defend intent (like the damage on an attack), and each power it applies (icon and
-/// amount: Strength 3, Weak 2) small in the corner of the buff or debuff intent it belongs to (IntentCorner), read from the move's code as Intent Forecast reads later moves
+/// amount: Strength 3, Weak 2) in the top-left corner of the buff or debuff intent it belongs to (IntentCorner), read from the move's code as Intent Forecast reads later moves
 /// (MovePowers). The game already shows a status intent's card count. Nothing while the intent is hidden. Checked against what the
 /// move did (ForecastAudit). Spec: docs/FEATURES.md#intent-details.
 /// </summary>
 public sealed class IntentDetailsFeature : IFeature, IFrameFeature
 {
-    internal const string BlockName = "SpireQoLIntentBlock";
+    private const string BlockName = "SpireQoLIntentBlock";
 
     /// <summary>Each enemy's intents as last drawn (the board probe, the turn, its intent nodes): drawn again only when that changes.</summary>
     private readonly Dictionary<NCreature, int> _drawnFor = new(ReferenceEqualityComparer.Instance);
@@ -85,7 +85,7 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             var shown = playerTurn && !hidden && node.Entity is { } creature ? For(creature) : null;
             var onScreen = intents.Select(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", fallback: null)).ToList();
             var corners = shown != null && onScreen.All(abstractIntent => abstractIntent != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
-            // Every block number, then each power in its intent's bottom-left corner (IntentCorner.Place).
+            // Every block number, then each power in its intent's top-left corner (IntentCorner.Place).
             for (var intentIndex = 0; intentIndex < intents.Count; intentIndex++)
                 if (intents[intentIndex].GetNodeOrNull<Control>(GodotNames.Path("%IntentHolder")) is { } holder)
                     Block(holder, intents[intentIndex], onScreen[intentIndex] is DefendIntent && shown?.Block is > 0 ? shown.Block : null);

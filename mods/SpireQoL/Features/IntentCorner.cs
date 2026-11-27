@@ -8,17 +8,17 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// The powers a move applies, as small chips in a corner of the intent they belong to (a buff on its buff intent, a debuff on its debuff
-/// intent): bottom left, or just above the number on an intent that shows one (decisions #398, #401). Read as part of that intent, not as
-/// another one.
+/// The powers a move applies, as chips in the top-left corner of the intent they belong to (a buff on its buff intent, a debuff on its debuff
+/// intent: decision #409), away from the number the game prints at the intent's foot. Read as part of that intent, not as another one.
 /// Shared by Intent Details (the intent on screen) and Intent Forecast (later moves). Our node, under the intent's %IntentHolder,
 /// so it bobs with the icon; the game's nodes aren't changed.
 /// </summary>
 internal static class IntentCorner
 {
     private const string PowersName = "SpireQoLIntentPowers";
-    private const int IconSize = 15;
-    private const int FontSize = 11;
+    private const int IconSize = 20;
+    private const int FontSize = 15;
+    private const int Outline = 5;
     private static bool _layoutLogged;
 
     /// <summary>Each power with the index of the intent it goes on: the move's buff intent for a buff, its debuff intent for a debuff, else its last.</summary>
@@ -83,24 +83,18 @@ internal static class IntentCorner
         }
         var size = row.GetCombinedMinimumSize();
         row.Size = size;
-        // The bottom-left corner of the game's %Value box (else the holder's), where a status intent shows its count, so the number of the intent
-        // beside it doesn't cover the chip (the Haunted Ship's Haunt: Weak beside its Dazed count). On an intent that shows a number of its own (an
-        // attack's damage, a status count, Intent Details' block), the top-left corner instead, clear of it (Toadpole's Spike Spit: its Thorns taken
-        // away on its attack intent: decision #401).
-        // NIntent.UpdateIntent sets its text: the attack's label, a status intent's count, else empty.
+        // The holder's top-left corner, on every intent (decision #409): the game prints an intent's number (an attack's damage, a status count) in
+        // its %Value box along the holder's foot, Intent Details' block number and Play Preview's new damage sit there too, so the top is the one
+        // corner no number reaches. Just above the %Value box, a 9×5 multi-hit's number still ran under the chip (a dev review).
+        row.Position = Vector2.Zero;
         var value = intent.GetNodeOrNull<RichTextLabel>(GodotNames.Path("%Value"));
-        var box = value != null ? new Rect2(value.Position, value.Size) : new Rect2(Vector2.Zero, holder.Size);
-        var showsNumber = value is { Visible: true } && !string.IsNullOrWhiteSpace(value.Text) || holder.GetNodeOrNull<Label>(GodotNames.Path(IntentDetailsFeature.BlockName)) != null;
-        // On one with a number, just above the %Value box, at its left: the holder's top-left is the number's own (the Doormaker's 30 under its
-        // Strength chip, a dev review), the icon drawn above it.
-        row.Position = showsNumber ? new Vector2(box.Position.X, box.Position.Y - size.Y) : new Vector2(box.Position.X, box.End.Y - size.Y);
-        if (!_layoutLogged && showsNumber && value != null)
+        if (!_layoutLogged && value is { Visible: true } && !string.IsNullOrWhiteSpace(value.Text))
         {
             // Once a launch: where the game lays out an intent with a number, so the chip's place can be checked against it (dev logs).
             _layoutLogged = true;
             var sprite = intent.GetNodeOrNull<Node2D>(GodotNames.Path("%Intent"));
             var spriteAt = sprite != null ? holder.GetGlobalTransform().AffineInverse() * sprite.GlobalPosition : (Vector2?)null;
-            ModEntry.Log.Detail($"[intent-corner] holder {holder.Position} size {holder.Size}; value box {box}, text \"{value.Text}\", content {value.GetContentWidth()}x{value.GetContentHeight()}, "
+            ModEntry.Log.Detail($"[intent-corner] holder {holder.Position} size {holder.Size}; value box {new Rect2(value.Position, value.Size)}, text \"{value.Text}\", content {value.GetContentWidth()}x{value.GetContentHeight()}, "
                 + $"align {value.HorizontalAlignment}/{value.VerticalAlignment}; icon centre {spriteAt}; chips at {row.Position} size {size}");
         }
     }
@@ -116,7 +110,7 @@ internal static class IntentCorner
         if (applied.Amount is { } otherAmount)
         {
             var amount = UiKit.Label(otherAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), FontSize, Colors.White);
-            amount.AddThemeConstantOverride(GodotNames.Name("outline_size"), 4);
+            amount.AddThemeConstantOverride(GodotNames.Name("outline_size"), Outline);
             amount.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.95f));
             amount.VerticalAlignment = VerticalAlignment.Bottom;
             amount.MouseFilter = Control.MouseFilterEnum.Ignore;
@@ -126,7 +120,7 @@ internal static class IntentCorner
         {
             // Only on some of the move's branches, and nothing tells which yet (decision #109).
             var maybe = UiKit.Label("?", FontSize, Colors.White);
-            maybe.AddThemeConstantOverride(GodotNames.Name("outline_size"), 4);
+            maybe.AddThemeConstantOverride(GodotNames.Name("outline_size"), Outline);
             maybe.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.95f));
             maybe.VerticalAlignment = VerticalAlignment.Bottom;
             maybe.MouseFilter = Control.MouseFilterEnum.Ignore;

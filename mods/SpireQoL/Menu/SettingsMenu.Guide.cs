@@ -419,7 +419,7 @@ public sealed partial class SettingsMenu
         Section(SectionTitle(FeatureSection.OnEnemies));
         GuideRow(example: null, "Intent Details",
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
-            + "with its icon and amount (Strength 3, Weak 2), small in the bottom-left corner of its buff or debuff intent, where a status intent shows its count. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
+            + "with its icon and amount (Strength 3, Weak 2), in the top-left corner of its buff or debuff intent, clear of the intent's number. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
         GuideRow(example: null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, up to three turns ahead, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll. "
