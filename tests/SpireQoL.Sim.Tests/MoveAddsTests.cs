@@ -175,4 +175,69 @@ public class MoveAddsTests
         var branch = Assert.Single(SimEngine.Run(Fight(fogmog)).Branches);
         Assert.Single(branch.Enemies);
     }
+
+    /// <summary>A Fogmog adding its eye in <paramref name="slot"/>, among two enemies standing in slots, of an encounter of <paramref name="slots"/>.</summary>
+    private static SimState SlottedFight(SimSpawnSlot slot, int slots, SimCondition? when = null, bool projectionOnly = false)
+    {
+        var fogmog = Fogmog(Eye(6) with { Slot = slot });
+        var joins = new MoveSpawnAction(Eye(6) with { Slot = slot }) { ProjectionOnly = projectionOnly };
+        fogmog.Move = new SimAction[] { when == null ? joins : new WhenAction(when, new SimAction[] { joins }) };
+        fogmog.InSlot = true;
+        var state = Fight(fogmog, new SimEnemy { Id = 1, Name = "Other", Hp = 30, InSlot = true });
+        state.EncounterSlots = slots;
+        return state;
+    }
+
+    private static readonly SimCondition ASlotIsFree = new NotCondition(new CountCondition(SimCounted.FreeSlots, SimCompare.Equal, Than: 0));
+
+    [Theory]
+    [InlineData(SimSpawnSlot.Named, 3, true)]
+    [InlineData(SimSpawnSlot.Free, 3, true)]
+    [InlineData(SimSpawnSlot.Free, 2, false)]
+    [InlineData(SimSpawnSlot.Outside, 3, false)]
+    public void ACreatureJoiningInASlotItsCodeNamesKeepsTheFreeSlotsKnown(SimSpawnSlot slot, int slots, bool inSlot)
+    {
+        // Decision #416: the slot CreatureCmd.Add puts it in, read from its code: one the encounter lists, the encounter's next free one while one is
+        // free, or none of them. The free slots stay known after it joins.
+        var branch = Assert.Single(SimEngine.Run(SlottedFight(slot, slots)).Branches);
+        Assert.Equal(slots, branch.EncounterSlots);
+        Assert.Equal(inSlot, branch.Enemy(id: 2)!.InSlot);
+    }
+
+    [Fact]
+    public void ACreatureJoiningInASlotNotReadForgetsTheFreeSlots()
+    {
+        var branch = Assert.Single(SimEngine.Run(SlottedFight(SimSpawnSlot.Unread, slots: 3)).Branches);
+        Assert.Null(branch.EncounterSlots);
+    }
+
+    [Theory]
+    [InlineData(3, 3)]
+    [InlineData(2, 2)]
+    public void AnAddOnAFreeSlotJoinsOnlyWhileOneIsFree(int slots, int enemies)
+    {
+        // Call for Backup's test (decision #416), asked as the step runs: with every slot taken, nothing joins.
+        var branch = Assert.Single(SimEngine.Run(SlottedFight(SimSpawnSlot.Free, slots, ASlotIsFree)).Branches);
+        Assert.Null(branch.Unmodelled);
+        Assert.Equal(enemies, branch.Enemies.Count);
+    }
+
+    [Fact]
+    public void ACreatureFollowedInTheProjectionOnlyJoinsNothingAfterAPlay()
+    {
+        // An HP among several (Two-Tailed Rat's rat): the enemy turn after a play runs on one state, and the creature makes no move this turn.
+        var branch = Assert.Single(SimEngine.Run(SlottedFight(SimSpawnSlot.Free, slots: 3, projectionOnly: true)).Branches);
+        Assert.Null(branch.Unmodelled);
+        Assert.Equal(2, branch.Enemies.Count);
+    }
+
+    [Fact]
+    public void AJoiningCreatureStartsWithTheNumbersItsRulesAskAndItsNextMove()
+    {
+        var spawn = Eye(6) with { Fields = NamedCounts.Empty.With("Monster.EyeWithTeeth.Wait", amount: 2), NextMoveId = "UNSET_MOVE" };
+        var fogmog = Fogmog(spawn);
+        var eye = Assert.Single(SimEngine.Run(Fight(fogmog)).Branches).Enemy(id: 1)!;
+        Assert.Equal(2, eye.Fields["Monster.EyeWithTeeth.Wait"]);
+        Assert.Equal("UNSET_MOVE", eye.NextMoveId);
+    }
 }

@@ -95,7 +95,7 @@ public static partial class SimAdapter
             // A number its move rules ask that the move's code sets in a way the reader doesn't keep (decision #411: Call for Backup's count, set on
             // every rat in a lambda): forgotten as it runs, so what asks it is unknown from there.
             foreach (var written in CountersWritten(monster.GetType(), perform))
-                if (!actions.Any(action => action is MoveStoreAction { Counter: true } store && store.Field == written))
+                if (!actions.Any(action => action is MoveStoreAction { Counter: true } store && store.Field == written || action is MoveCounterOfEachAction counterOfEach && counterOfEach.Field == written))
                     actions.Add(new MoveStoreAction(written, Amount: 0, Unknown: "set where the reader doesn't follow it", Counter: true));
             return actions;
         }
@@ -206,6 +206,9 @@ public static partial class SimAdapter
                     var gap = inLoop ? "in a loop" : conditional ? "a test a play can change" : MoveSpawnGap(spawn, program);
                     // A random pick (decision #379) is followed in the projection only: the enemy turn after a play runs on one state.
                     if (gap == null && spawn.Command.GenericArguments.Count == 0) gap = "a monster picked: the projection's only";
+                    // An HP among several (decision #416: Two-Tailed Rat's rat) the same: the enemy turn after a play doesn't branch on the roll.
+                    if (gap == null && spawn.Command.GenericArguments is [var joining] && MonsterType(joining) is { } joiningType && SafeCanonical(joiningType) is { } canonical
+                        && canonical.MinInitialHp != canonical.MaxInitialHp) gap = "an HP among several: the projection's only";
                     if (gap != null) yield return (spawn, gap);
                     continue;
                 }
@@ -245,7 +248,8 @@ public static partial class SimAdapter
     internal static string? MoveSpawnGap(CommandStep add, ModelProgram program)
     {
         if (add.Command.GenericArguments.Count != 1 && (add.Values.Count == 0 || PickOf(add.Values[0]) == null)) return "a monster picked";
-        if (add.Condition != null && add.Condition.Literals.Any(literal => !FixedForTheFight(literal.Test))) return "a test a play can change";
+        // A test of the encounter's free slots (decision #416: Call for Backup's room for a rat) is asked of the state as the step runs.
+        if (add.Condition != null && add.Condition.Literals.Any(literal => !FixedForTheFight(literal.Test) && !MoveConditions.IsFreeSlotTest(literal.Test))) return "a test a play can change";
         // Its creature used later in the move: only a power applied to it (decision #379: Fabricator's Minion) is followed, as it joins.
         if (program.All().Any(step => step != add && StepParts(step).Any(part => part is ResultValue { Command: "CreatureCmd.Add" })
             && (step is not CommandStep apply || AddedBy(apply, program) is not { } made || ReferenceEquals(made, add) && AfterJoinGap(apply) != null))) return "used once joined";
@@ -384,6 +388,12 @@ public static partial class SimAdapter
         // A power on the creature an add just made (decision #379): the add's own action applies it as it joins (MoveSpawnAction.AfterJoin).
         if (step is CommandStep { Command.FullName: "PowerCmd.Apply" } onAdded && each == null && AddedBy(onAdded, context.Program) is { } made
             && MoveSpawnGap(made, context.Program) == null && AfterJoinGap(onAdded) == null) return Array.Empty<SimAction>();
+        // A ForEach over the side's monsters of a class setting a number of their own on each (decision #416: Call for Backup's every rat's count), on a
+        // condition fixed for the fight that holds (IsLiveCombat) or none.
+        if (step is LoopStep { Body: [StoreStep { Field: var itemField } itemStore] } eachLoop && each == null && itemField.StartsWith(ProgramReader.ItemPrefix, StringComparison.Ordinal)
+            && (eachLoop.Condition == null || eachLoop.Condition.Literals.All(literal => FixedForTheFight(literal.Test)) && ProgramEvaluator.Holds(eachLoop.Condition, context.Board, context.Program) == true)
+            && context.Board.Self is MonsterModel setter && CounterOfEach(eachLoop, itemStore, setter.GetType()) is { } counterOfEach)
+            return new SimAction[] { counterOfEach };
         if (step.Condition != null)
         {
             // A power or block on a condition of the monster's own state (Plow's Strength while it still has Plow: this.Creature.HasPower<PlowPower>()),
@@ -423,6 +433,34 @@ public static partial class SimAdapter
             "CreatureCmd.GainBlock" => MoveBlock(command, context, each),
             _ => Array.Empty<SimAction>(),
         };
+    }
+
+    /// <summary>
+    /// A ForEach over the side's monsters of a class (OfType&lt;T&gt; of the fight's enemies' monsters, as a list) setting a number of their own its rules
+    /// ask (MoveConditions.CounterKeys) on each to the most of them of that number plus a constant (Max over the same kind of list, c =&gt; c.N add k): a
+    /// MoveCounterOfEachAction (decision #416); null for any other.
+    /// </summary>
+    private static MoveCounterOfEachAction? CounterOfEach(LoopStep loop, StoreStep store, Type monster)
+    {
+        var named = store.Field[ProgramReader.ItemPrefix.Length..];
+        var counter = ProgramReader.OwnersMonsterPrefix + named;
+        var property = named[(named.LastIndexOf('.') + 1)..];
+        if (store.Condition != null || loop.Items is not { } items || MonstersOfClass(items) is not { } ofClass || !MoveConditions.CounterKeys(MonsterType(ofClass) ?? monster).Contains(counter)) return null;
+        if (StepValues.Unstored(store.Value) is not QueryValue { Name: "Max", Arguments: [var over, LambdaValue { Body.Terms: [[{ Test: var returned, Holds: true }]] } lambda] }
+            || MonstersOfClass(over) != ofClass) return null;
+        if (returned is not ArithmeticValue { Op: "add" or "sub", Left: QueryValue { Name: var read, Of: ParameterValue { Name: var parameter } }, Right: ConstantValue { Value: var amount } } arithmetic
+            || read != property || parameter != lambda.Parameter) return null;
+        var plus = (int)amount;
+        return new MoveCounterOfEachAction(ofClass, counter, arithmetic.Op == "sub" ? -plus : plus);
+    }
+
+    /// <summary>The class of monster a list of the fight's enemies' monsters holds (ToList(OfType&lt;T&gt;(Select(CombatState.Enemies, c =&gt; c.Monster)))), or null.</summary>
+    private static string? MonstersOfClass(ProgramValue list)
+    {
+        var value = StepValues.Unstored(list);
+        if (value is QueryValue { Name: "ToList", Arguments: [var listed] }) value = StepValues.Unstored(listed);
+        return value is QueryValue { Name: "OfType", GenericArguments: [var monsterClass], Arguments: [QueryValue { Name: "Select", Arguments: [QueryValue { Name: "Enemies" }, LambdaValue selector] }] }
+            && selector.Parts().Any(part => part is QueryValue { Name: "Monster" }) ? monsterClass : null;
     }
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlySet<string>> DamageFieldsByMonster = new();
@@ -573,7 +611,14 @@ public static partial class SimAdapter
     private static IEnumerable<SimAction> MoveSpawn(CommandStep add, MoveContext context)
     {
         var gap = MoveSpawnGap(add, context.Program);
-        if (gap == null && add.Condition != null)
+        SimCondition? when = null;
+        if (gap == null && add.Condition != null && add.Condition.Literals.Any(literal => MoveConditions.IsFreeSlotTest(literal.Test)))
+        {
+            // On a free slot (decision #416), the rest of its test fixed for the fight: asked of the state as the step runs.
+            when = context.Board.Self is MonsterModel adder ? MoveConditions.OfStep(adder, add.Condition) : null;
+            if (when == null) gap = "unread value";
+        }
+        else if (gap == null && add.Condition != null)
         {
             var holds = ProgramEvaluator.Holds(add.Condition, context.Board, context.Program);
             if (holds == false) return Array.Empty<SimAction>(); // fixed for the fight, and false: it adds none
@@ -583,7 +628,7 @@ public static partial class SimAdapter
         if (gap == null && add.Command.GenericArguments.Count == 0 && PickOf(add.Values[0]) is { } pick)
         {
             // A random pick (decision #379): every option read, or none; the field it leaves out read on the board until a pick sets it.
-            var options = pick.Options.Select(option => JoiningSpawn(option, context)).ToList();
+            var options = pick.Options.Select(option => JoiningSpawn(option, add, context)).ToList();
             if (options.Any(option => option == null))
             {
                 context.Gaps.Add("unread value");
@@ -594,21 +639,53 @@ public static partial class SimAdapter
             return new SimAction[] { new MovePickSpawnAction(options!, pick.Field, lastNow?.GetType().Name) { AfterJoin = afterJoin } };
         }
         var type = gap == null ? MonsterType(add.Command.GenericArguments[0]) : null;
-        var spawn = type != null ? JoiningSpawn(type, context) : null;
+        var spawn = type != null ? JoiningSpawn(type, add, context) : null;
         if (gap != null || spawn == null)
         {
             context.Gaps.Add(gap ?? "unread value");
             return Array.Empty<SimAction>();
         }
-        return new SimAction[] { new MoveSpawnAction(spawn) { AfterJoin = afterJoin } };
+        // An HP among several (a roll) is followed in the projection only: the enemy turn after a play runs on one state, and the creature makes no move
+        // this turn (decision #416: Two-Tailed Rat's rat).
+        var joins = new MoveSpawnAction(spawn) { AfterJoin = afterJoin, ProjectionOnly = spawn.Hp.Count > 1 };
+        return new SimAction[] { when == null ? joins : new WhenAction(when, new SimAction[] { joins }) };
     }
 
-    /// <summary>The monster of <paramref name="type"/> joining in the enemy turn (Spawn: its HP none an enemy has, its starting powers), or null.</summary>
-    private static SimSpawn? JoiningSpawn(Type type, MoveContext context)
+    /// <summary>
+    /// The monster of <paramref name="type"/> joining in the enemy turn (Spawn: its HP none an enemy has, its starting powers), or null; with the numbers of
+    /// its own its rules ask as a new one has them, its next move before its first roll, and the slot <paramref name="add"/> puts it in (decision #416).
+    /// </summary>
+    private static SimSpawn? JoiningSpawn(Type type, CommandStep add, MoveContext context)
     {
         if (CanonicalMonster(type) is not { } monster) return null;
         var taken = context.Combat.Enemies.Select(enemy => enemy.MaxHp).ToHashSet();
-        return Spawn(type, monster, context.Combat, taken) with { Monster = type.Name, UniqueFromEarlier = true, JoinUnread = JoinUnread(context.Combat) };
+        return Spawn(type, monster, context.Combat, taken) with
+        {
+            Monster = type.Name, UniqueFromEarlier = true, JoinUnread = JoinUnread(context.Combat), Fields = MoveConditions.CounterFields(monster, NamedCounts.Empty),
+            NextMoveId = NewMonstersMove, Slot = SlotOf(add, context.Combat),
+        };
+    }
+
+    /// <summary>A monster's next move before its first roll (MonsterModel.NextMove's initial value, a MoveState with no move): its Id.</summary>
+    private static readonly string? NewMonstersMove = SafeString(() => new MoveState().Id);
+
+    /// <summary>
+    /// The slot CreatureCmd.Add puts its creature in (its slot argument, decision #416): the encounter's next free one (MoveConditions.IsNextFreeSlot), a name
+    /// the encounter lists or one it doesn't, none given (outside its slots); anything else isn't read.
+    /// </summary>
+    internal static SimSpawnSlot SlotOf(CommandStep add, ICombatState combat)
+    {
+        var parameters = add.Command.GenericArguments.Count == 1 ? 2 : 4;
+        if (add.Values.Count < parameters) return SimSpawnSlot.Outside;
+        var slot = add.Values[parameters - 1];
+        if (MoveConditions.IsNextFreeSlot(slot)) return SimSpawnSlot.Free;
+        // A name in the code (ldstr: "illusion"), quoted as the reader keeps it.
+        if (StepValues.Unstored(slot) is NamedValue { Name: ['"', .., '"'] quoted } && quoted.Length >= 2 && quoted[1..^1] is var name)
+        {
+            try { return combat.Encounter?.Slots.Contains(name) == true ? SimSpawnSlot.Named : SimSpawnSlot.Outside; }
+            catch (Exception exception) when (exception is InvalidOperationException or NullReferenceException) { return SimSpawnSlot.Unread; }
+        }
+        return SimSpawnSlot.Unread;
     }
 
     /// <summary>The powers the move applies to the creature <paramref name="add"/> made (AddedBy, decision #379), each its amount read on the board.</summary>

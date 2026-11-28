@@ -156,7 +156,7 @@ internal static class MoveConditions
                 && OwnMethodCode(owner, call.Name) is { } body && Translate(body, monster, owner, depth + 1, ownState) is { } returned:
                 return returned;
             // No slot of the encounter free (string.IsNullOrEmpty(Encounter?.GetNextSlot(CombatState)): Two-Tailed Rat's room to call for backup).
-            case QueryValue { Type: "String", Name: "IsNullOrEmpty", Arguments: [var slot] } when slot.Parts().Any(part => part is QueryValue { Name: "GetNextSlot" }):
+            case var slotTest when IsFreeSlotTest(slotTest):
                 return new CountCondition(SimCounted.FreeSlots, SimCompare.Equal, Than: 0);
             // A teammate whose next move is one of its (Any of its side's creatures but itself, c.Monster.NextMove.Id.Equals("CALL_FOR_BACKUP_MOVE")).
             case QueryValue { Type: "Enumerable", Name: "Any", Arguments: [var items, LambdaValue lambda] } when Teammates(items) is { } excludingItself && NextMoveTested(lambda) is { } move:
@@ -183,6 +183,27 @@ internal static class MoveConditions
             int number => new KnownCondition(number != 0),
             _ => null,
         };
+    }
+
+    /// <summary>
+    /// No slot of the encounter free: string.IsNullOrEmpty of the encounter's next free slot (IsNextFreeSlot), as the code tests it before adding a creature
+    /// there (Two-Tailed Rat's CanSummon and its Call for Backup).
+    /// </summary>
+    internal static bool IsFreeSlotTest(ProgramValue test) =>
+        test is QueryValue { Type: "String", Name: "IsNullOrEmpty", Arguments: [var slot] } && IsNextFreeSlot(slot);
+
+    /// <summary>
+    /// The encounter's next slot no enemy stands in, as the code gets it: EncounterModel.GetNextSlot(CombatState) (whose code is Slots.FirstOrDefault(s =&gt;
+    /// Enemies.All(c =&gt; c.SlotName != s))), or that pick made in place (Call for Backup's LastOrDefault over the encounter's Slots, testing every enemy's
+    /// SlotName), kept in a local or not; empty when every slot is taken.
+    /// </summary>
+    internal static bool IsNextFreeSlot(ProgramValue slot)
+    {
+        var value = StepValues.Unstored(slot);
+        if (slot.Parts().Any(part => part is QueryValue { Name: "GetNextSlot" })) return true;
+        return value is QueryValue { Name: "FirstOrDefault" or "LastOrDefault", Arguments: [QueryValue { Name: "Slots", Of: QueryValue { Name: "Encounter" } }, LambdaValue lambda, ..] }
+            && lambda.Parts().Any(part => part is QueryValue { Name: "All", Arguments: [QueryValue { Name: "Enemies" }, ..] })
+            && lambda.Parts().Any(part => part is QueryValue { Name: "SlotName" });
     }
 
     /// <summary>

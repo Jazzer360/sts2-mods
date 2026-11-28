@@ -1945,7 +1945,10 @@ public static partial class SimEngine
                             // CreatureCmd.Stun of itself (Creature.StunInternal: nothing once it's dead): its next move is the stunned move.
                             case MoveStunAction when enemy.Alive: Stun(enemy); break;
                             // CreatureCmd.Add of a creature its code names (decision #376): it joins now, after the turn's list of who acts.
-                            case MoveSpawnAction moveSpawnAction: MoveSpawn(state, enemy, moveSpawnAction.Spawn, moveSpawnAction.AfterJoin); break;
+                            // One followed in the projection only (an HP among several, and no move this turn: Two-Tailed Rat's rat) joins nothing after a play.
+                            case MoveSpawnAction moveSpawnAction when !moveSpawnAction.ProjectionOnly || state.Forecasting: MoveSpawn(state, enemy, moveSpawnAction.Spawn, moveSpawnAction.AfterJoin); break;
+                            // A number of their own set on every enemy of a class (decision #416: Call for Backup's count), for the projection's later rolls.
+                            case MoveCounterOfEachAction moveCounterOfEachAction when state.Forecasting: MoveCounterOfEach(state, moveCounterOfEachAction); break;
                             // A random pick of the creature it adds (decision #379) is a branch each before the turn (PickSpawns); one left here wasn't.
                             // Outside a projection it adds nothing, as before it was read (a reviewed gap: the bot's HP is a roll the enemy turn's
                             // one state doesn't branch on, and it makes no move this turn).
@@ -1954,6 +1957,8 @@ public static partial class SimEngine
                                 break;
                             // A property of its own its attack's damage reads (decision #337): only a projection has a later turn to read it.
                             case MoveStoreAction moveStoreAction when state.Forecasting: MoveStore(state, enemy, moveStoreAction); break;
+                            // A test guarding only what the projection follows (Call for Backup's free slot, decision #416) isn't asked after a play.
+                            case WhenAction projected when !state.Forecasting && projected.Then.All(then => then is MoveSpawnAction { ProjectionOnly: true }): break;
                             // A step on its own state (Bowlbug Rock's IsOffBalance: decision #271), asked of it as the step runs.
                             case WhenAction whenAction:
                                 var holds = whenAction.AskedAtMoveStart && askedAtStart != null && askedAtStart.TryGetValue(whenAction, out var asked) ? asked
@@ -1994,10 +1999,11 @@ public static partial class SimEngine
         }
         var id = 0;
         foreach (var enemy in state.Enemies) id = Math.Max(id, enemy.Id + 1);
-        state.EncounterSlots = null; // the slot it joins in isn't read: the free slots aren't known from here (decision #411)
+        var inSlot = JoinsSlot(state, spawn.Slot);
         state.Enemies.Add(new SimEnemy
         {
             Id = id, Name = spawn.Name, Monster = spawn.Monster ?? "", Hp = spawn.Hp[0], Powers = SpawnPowers(state, spawn.Powers), AddedBy = summoner.Id,
+            InSlot = inSlot, Fields = spawn.Fields, NextMoveId = spawn.NextMoveId,
         });
         foreach (var branch in AddedToCombat(state, id, spawn.JoinUnread))
             if (!ReferenceEquals(branch, state)) state.Unmodelled ??= $"a creature joining the fight in the enemy turn ({spawn.Name}) branches, which the enemy turn doesn't follow";

@@ -591,6 +591,12 @@ public static class ProgramReader
     /// <summary>The prefix of a collection the code makes itself, in a local ("Local.wrigglers"), changed by a DataStep.</summary>
     public const string LocalPrefix = "Local.";
 
+    /// <summary>
+    /// The prefix of a property set on each item of a list the code goes over with ForEach ("Item.TwoTailedRat.CallForBackupCount": Call for Backup's
+    /// every rat), the property's declaring class and its name, inside that ForEach's LoopStep.
+    /// </summary>
+    public const string ItemPrefix = "Item.";
+
     /// <summary>The DataStep key of a collection the code made in a local: its name, or where it was stored when the code keeps no name ("Local.@12").</summary>
     public static string LocalKey(StoredValue local) => LocalPrefix + (local.Name.Length > 0 ? local.Name : "@" + local.Offset.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -662,6 +668,9 @@ public static class ProgramReader
         /// (base.Creature.HpDisplay) is a store, "Creature.HpDisplay", the power's owner's.
         /// </summary>
         public bool ForOwnersPower { get; init; }
+
+        /// <summary>The parameter of a ForEach's lambda being read (its item): a property set on it is a store, "Item." and the property (ItemPrefix).</summary>
+        public string? ItemParameter { get; init; }
 
         public List<ProgramStep> Steps(MethodBase method, int depth)
         {
@@ -862,6 +871,25 @@ public static class ProgramReader
                     continue;
                 }
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
+                // list.ForEach(each => ...) with a lambda the code makes (Call for Backup's ForEach setting every rat's CallForBackupCount): a loop over the list,
+                // its body the lambda's steps, a value it captures (a closure's field) as the code stored it before.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, Name: "ForEach", ParameterCount: 1 } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
+                    && depth < MaxDepth && ForEachLambda(ops, i) is { } eachLambda)
+                {
+                    var itemParameter = eachLambda.GetParameters() is [var item] ? item.Name ?? "x" : "x";
+                    var lambdaSteps = new Reader(_card, _read) { ItemParameter = itemParameter }.Steps(eachLambda, depth + 1);
+                    ProgramValue? Captured(ProgramValue value) => value is NamedValue { Name: var name } && flow.Captured(name) is { } stored ? stored : null;
+                    var body = lambdaSteps.Select(step => step is StoreStep store ? store with { Value = store.Value.Map(Captured) } : step).ToList();
+                    into.Add(new LoopStep(instruction.Offset, itemParameter, body) { Condition = condition, Items = flow.ReceiverValue(i, member.ParameterCount) });
+                    continue;
+                }
+                // A property set on a ForEach's item (r.CallForBackupCount = max): a store, "Item.TwoTailedRat.CallForBackupCount".
+                if (ItemParameter != null && member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal)
+                    && flow.ReceiverValue(i, arguments: 1) is ParameterValue { Name: var itemName } && itemName == ItemParameter)
+                {
+                    into.Add(new StoreStep(instruction.Offset, ItemPrefix + member.DeclaringType + "." + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
                 // A change to one of the model's own data's collections whose result isn't used (an Add, a Remove for its out value).
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
                     && (!member.ReturnsValue || i + 1 < ops.Count && ops[i + 1].OpCode == OpCodes.Pop)
@@ -1200,6 +1228,14 @@ public static class ProgramReader
             if (_card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is not { } owner) return null;
             if (Called(owner.GetMethods(All), member) is not { } found) return null;
             return (owner, found, BodyOf(found));
+        }
+
+        /// <summary>The lambda a ForEach call at <paramref name="call"/> is given (the ldftn of its delegate just before the call): its code, or null.</summary>
+        private MethodBase? ForEachLambda(IReadOnlyList<CodeOp> ops, int call)
+        {
+            for (var back = call - 1; back >= 0 && back >= call - 4; back--)
+                if (ops[back].OpCode == OpCodes.Ldftn && ops[back].Member is { } lambda) return Lambda(lambda);
+            return null;
         }
 
         private MethodBase? Lambda(CodeMember member)
@@ -1937,6 +1973,9 @@ public static class ProgramReader
 
         /// <summary>The value on top of the stack just before <paramref name="index"/>, read back as an expression.</summary>
         public ProgramValue ValueBefore(int index) => ReadBack(index, depth: 0).Value;
+
+        /// <summary>What the code stored in a closure's field <paramref name="field"/> (a local a lambda captures), when one store sets it; null otherwise.</summary>
+        public ProgramValue? Captured(string field) => FieldStoredOnce(field) is { } store && ReadBack(store, depth: 0) is { Start: >= 0 } stored ? stored.Value : null;
 
         /// <summary>
         /// The value the code just before <paramref name="end"/> leaves, and where its code starts (-1 when it can't be read): constants,

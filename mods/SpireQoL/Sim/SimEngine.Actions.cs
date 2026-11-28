@@ -1346,4 +1346,49 @@ public static partial class SimEngine
             : store.Amount;
         enemy.Fields = enemy.Fields.With(store.Field, value);
     }
+
+    /// <summary>
+    /// A number of their own a move sets on every enemy of a class (MoveCounterOfEachAction, decision #416: Call for Backup's every rat's CallForBackupCount,
+    /// the most of theirs plus one, the rat it just added among them): each living one of the class gets the most of theirs plus the amount. One not holding
+    /// it (not known) forgets it on all of them: what asks it is unknown from there.
+    /// </summary>
+    private static void MoveCounterOfEach(SimState state, MoveCounterOfEachAction each)
+    {
+        var most = int.MinValue;
+        var known = true;
+        foreach (var enemy in state.Enemies)
+        {
+            if (!enemy.Alive || enemy.Monster != each.Monster) continue;
+            if (enemy.Fields.Has(each.Field)) most = Math.Max(most, enemy.Fields[each.Field] + each.MostPlus);
+            else known = false;
+        }
+        foreach (var enemy in state.Enemies)
+        {
+            if (!enemy.Alive || enemy.Monster != each.Monster) continue;
+            enemy.Fields = known && most != int.MinValue ? enemy.Fields.With(each.Field, most) : enemy.Fields.Without(each.Field);
+        }
+    }
+
+    /// <summary>
+    /// Whether a creature joining stands in one of the encounter's slots (SimSpawn.Slot, decision #416): a slot its code names that the encounter lists, or
+    /// the encounter's next free one while one is free (SimCounted.FreeSlots, counted before it joins). A slot not read, or a free one counted on slots not
+    /// known, leaves the free slots not known from here (decision #411).
+    /// </summary>
+    internal static bool JoinsSlot(SimState state, SimSpawnSlot slot)
+    {
+        switch (slot)
+        {
+            case SimSpawnSlot.Named: return true;
+            case SimSpawnSlot.Outside: return false;
+            case SimSpawnSlot.Free when state.EncounterSlots is { } slots:
+            {
+                var standing = 0;
+                foreach (var enemy in state.Enemies) if (enemy.Alive && enemy.InSlot) standing++;
+                return slots - standing > 0;
+            }
+            default:
+                state.EncounterSlots = null;
+                return false;
+        }
+    }
 }

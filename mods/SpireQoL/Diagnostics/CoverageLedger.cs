@@ -587,7 +587,7 @@ internal static partial class CoverageLedger
         ["ThievingHopper"] = "ignore: AfterAddedToRoom PowerCmd.Apply 5 Escape Artist to itself at the fight's start (on the board the first decision reads); BeforeRemovedFromRoom only stops a sound",
         ["TorchHeadAmalgam"] = "ignore: AfterAddedToRoom PowerCmd.Apply Minion to itself at the fight's start (on the board the first decision reads); OnDieToDoom only hides its torches (looks)",
         ["ToughEgg"] = "gap: AfterAddedToRoom PowerCmd.Apply Hatch to itself (1 or 2 by whose turn it is) as Ovicopter's move summons it, or hatches it (CreatureCmd.SetMaxAndCurrentHp of a roll), which the enemy turn doesn't follow yet (TRACKER: summons in a move); on the board from the next decision",
-        ["TwoTailedRat"] = "ignore: AfterAddedToRoom only runs MonsterModel's own (nothing); its move rules' weights are read from their code (decision #411)",
+        ["TwoTailedRat"] = "ignore: AfterAddedToRoom only runs MonsterModel's own (nothing); its move rules' weights are read from their code (decision #411), Call for Backup's rat and count followed in the projection (decision #416)",
         ["Zapbot"] = "gap: AfterAddedToRoom PowerCmd.Apply 2 High Voltage to itself as Fabricator's move summons it, a random bot of a set, which the enemy turn doesn't follow yet (TRACKER: summons in a move); on the board from the next decision",
 
         // ======== potions, enchantments, afflictions

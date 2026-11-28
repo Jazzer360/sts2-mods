@@ -69,7 +69,7 @@ public class ProjectedWeightTests
     [Fact]
     public void ACountItsMoveSetsUnreadIsForgottenAndTheRollUnknown()
     {
-        // Its move sets the count where the reader doesn't follow it (Call for Backup's ForEach): the roll asks what isn't known, so the forecast ends
+        // Its move sets the count where the reader doesn't follow it (a lambda it doesn't read): the roll asks what isn't known, so the forecast ends
         // before it, with the enemy listed as one whose roll couldn't be told.
         var rat = Rat(id: 0);
         rat.Fields = rat.Fields.With(Wait, 0);
@@ -132,5 +132,42 @@ public class ProjectedWeightTests
         Assert.Equal(true, SimEngine.Holds(state, noSlotFree, monster: 0));
         state.EncounterSlots = null;
         Assert.Null(SimEngine.Holds(state, noSlotFree, monster: 0));
+    }
+
+    private const string Calls = "Monster.Rat.Calls";
+
+    /// <summary>B (3 to C's 1) once its count of calls is 1.</summary>
+    private static readonly IReadOnlyList<(SimCondition When, double Weight)> OnceItCalled = new (SimCondition, double)[]
+    {
+        (new CountCondition(SimCounted.MonsterCounter, SimCompare.Equal, Than: 1) { Field = Calls }, 3),
+        (new NotCondition(new CountCondition(SimCounted.MonsterCounter, SimCompare.Equal, Than: 1) { Field = Calls }), 0),
+    };
+
+    [Fact]
+    public void ACountSetOnEveryEnemyOfItsClassIsTheMostOfThemPlusOne()
+    {
+        // Decision #416, Call for Backup: a rat joins (its count 0, as a new rat has it), then every rat's count is the most of theirs plus one. The rolls
+        // after it ask the count: 1 on all three, so B can come for each.
+        var caller = Rat(id: 0);
+        caller.Fields = caller.Fields.With(Calls, 0);
+        var joining = new SimSpawn("Rat", new[] { 20, 21 }) { Monster = "Rat", Fields = NamedCounts.Empty.With(Calls, 0), NextMoveId = "A" };
+        caller.Move = new SimAction[] { new MoveSpawnAction(joining) { ProjectionOnly = true }, new MoveCounterOfEachAction("Rat", Calls, MostPlus: 1) };
+        var other = Rat(id: 1);
+        other.Fields = other.Fields.With(Calls, 0);
+        var rules = Rules(OnceItCalled);
+        var projection = SimEngine.Project(Fight(caller, other), Array.Empty<IReadOnlyList<ProjectedChoice>>(), new Dictionary<int, ProjectedRules> { [0] = rules, [1] = rules },
+            joining: new Dictionary<string, ProjectedRules>(StringComparer.Ordinal) { ["Rat"] = rules });
+        Assert.Empty(projection.UnknownRolls);
+        foreach (var rat in new[] { 0, 1, 2 }) Assert.Equal(0.75, Chance(projection, enemyId: rat, "B"), precision: 6);
+    }
+
+    [Fact]
+    public void ACountSetOnEveryEnemyOfItsClassIsForgottenWhereOneDoesntHoldIt()
+    {
+        var caller = Rat(id: 0);
+        caller.Fields = caller.Fields.With(Calls, 0);
+        caller.Move = new SimAction[] { new MoveCounterOfEachAction("Rat", Calls, MostPlus: 1) };
+        var projection = Project(Fight(caller, Rat(id: 1)), new() { [0] = Rules(OnceItCalled), [1] = Rules(OnceItCalled) });
+        Assert.Contains(0, projection.UnknownRolls);
     }
 }

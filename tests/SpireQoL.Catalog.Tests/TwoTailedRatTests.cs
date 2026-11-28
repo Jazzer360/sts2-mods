@@ -127,14 +127,31 @@ public class TwoTailedRatTests
     }
 
     [Fact]
-    public void AfterACallForBackupTheNextRollIsntKnown()
+    public void CallForBackupsCountIsReadAsEveryRatsMostPlusOne()
     {
-        // Call for Backup sets every rat's CallForBackupCount in a lambda the reader doesn't keep, and brings a rat into a slot: the next rolls ask what
-        // the projection doesn't know, so their forecast ends there (never the weights as they stood before it).
+        // Its ForEach sets every rat's CallForBackupCount to the most of them plus one (a lambda over the list of rats, the value it captures stored before).
+        var program = Procs.Programs.ModelPrograms.Of(typeof(TwoTailedRat), "CallForBackup");
+        var loop = Assert.Single(program.Steps.OfType<Procs.Programs.LoopStep>());
+        var store = Assert.IsType<Procs.Programs.StoreStep>(Assert.Single(loop.Body));
+        Assert.Equal(Procs.Programs.ProgramReader.ItemPrefix + "TwoTailedRat.CallForBackupCount", store.Field);
+        Assert.Contains("Max(", store.Value.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AfterACallForBackupTheRatsNextRollsAreKnown()
+    {
+        // Call for Backup brings a rat into the encounter's last free slot and sets every rat's CallForBackupCount to the most of them plus one (1): the
+        // rolls after it ask both, and both are followed. The caller can't call again (UseOnlyOnce): Scratch, Disease Bite and Screech, a third each.
+        // The second rat can still call (1 < 3, two slots free, no teammate about to): 0.75 against Disease Bite's and Screech's 1/12 (Scratch can't
+        // repeat). The rat that joined waits its two turns (its own TurnsUntilSummonable, as a new rat has it): it can't call on its first roll.
         var (fight, rats) = Rats(turnsUntilSummonable: 0, "CALL_FOR_BACKUP_MOVE", "SCRATCH_MOVE");
         var input = SimAdapter.ProjectionStart(fight.Me, fight.Combat)!;
         var projection = SimEngine.Project(input.State, input.Turns, input.Rules, input.Joining);
-        Assert.Contains(input.Ids[rats[0]], projection.UnknownRolls);
-        Assert.Empty(projection.ForecastOf(input.Ids[rats[0]])!);
+        Assert.DoesNotContain(input.Ids[rats[0]], projection.UnknownRolls);
+        Assert.Equal(1 / 3.0, Chance(projection, input.Ids[rats[0]], "SCRATCH_MOVE"), precision: 4);
+        Assert.Equal(0.75 / (0.75 + 2 / 12.0), Chance(projection, input.Ids[rats[1]], "CALL_FOR_BACKUP_MOVE"), precision: 4);
+        var joined = input.Ids.Values.Max() + 1;
+        Assert.Equal(0, Chance(projection, joined, "CALL_FOR_BACKUP_MOVE"));
+        Assert.Equal(1 / 3.0, Chance(projection, joined, "SCRATCH_MOVE"), precision: 4);
     }
 }

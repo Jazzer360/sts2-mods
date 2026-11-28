@@ -283,7 +283,21 @@ public sealed record MoveSpawnAction(SimSpawn Spawn) : SimAction
     /// #379), its applier the summoner, once it has joined.
     /// </summary>
     public PowerSet AfterJoin { get; init; } = PowerSet.Empty;
+
+    /// <summary>
+    /// Followed in the projection only (Two-Tailed Rat's rat: an HP among several, a roll the enemy turn after a play doesn't branch on, and it makes no
+    /// move this turn): there it joins; after a play nothing joins, as before it was read.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ProjectionOnly { get; init; }
 }
+
+/// <summary>
+/// A number of their own a move sets on every enemy of a class (decision #416: Call for Backup's ForEach over the rats, each's CallForBackupCount the most
+/// of theirs plus one): each living enemy of <paramref name="Monster"/> gets the most of their <paramref name="Field"/> plus <paramref name="MostPlus"/>.
+/// One of them not holding it forgets it on all. Only a projection runs it (SimState.Forecasting), as MoveStoreAction.
+/// </summary>
+public sealed record MoveCounterOfEachAction(string Monster, string Field, int MostPlus) : SimAction;
 
 /// <summary>
 /// A creature an enemy's move adds that it picks at random (decision #379: CreatureCmd.Add of RunRng.MonsterAi.NextItem of a set of monsters,

@@ -28,6 +28,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Punch of Joy's preview shows what it does instead of `?`: it counts the Sadness in your hand it turns into Joy.
 - Mourning Blow and Particle Wall go back into your hand once played, and Shining Strike onto your draw pile's top, as their own code sends them: the preview counted them discarded.
 - Intent Forecast: the Two-Tailed Rat's next intent shows Call for Backup the turn it becomes possible, not a turn late: the chances of its moves are read from its code and worked out after its move counts down its wait, and a rat rolling after another that may call for backup counts that roll.
+- Intent Forecast: after a Two-Tailed Rat calls for backup, the rats' next intents are forecast (they ended there): the rat it brings in joins in the next free slot and waits its two turns, and every rat's count of calls goes up, as the game's code does it.
 - Multi-Cast that kills the last enemy partway through no longer predicts its orb gone: the game stops evoking once the fight is over, so the orb stays.
 - Multi-Cast and other orb evokes on an Axebot with Stock: its next Axebot joins as the evoke kills it, so the evokes after it hit the new one (180 damage, not 90).
 - Withering Presence's Wither no longer gives Pillar of Creation's block: the game makes it with no creator, so it isn't a card you created.

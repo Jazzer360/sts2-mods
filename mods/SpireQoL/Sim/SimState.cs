@@ -383,6 +383,22 @@ public sealed record TurnEndCard(string Card, string Title, int Amount)
     public override string ToString() => $"TurnEndCard {{ Card = {Card}, Title = {Title}, Amount = {Amount} }}";
 }
 
+/// <summary>The slot a creature joins in (CreatureCmd.Add's slot argument), as SimSpawn.Slot.</summary>
+public enum SimSpawnSlot
+{
+    /// <summary>Not read: the encounter's free slots aren't known once it has joined.</summary>
+    Unread,
+    /// <summary>A slot that isn't one of the encounter's (none given, or a name it doesn't list).</summary>
+    Outside,
+    /// <summary>One of the encounter's slots, named in its code (Fogmog's "illusion", where the encounter lists it).</summary>
+    Named,
+    /// <summary>
+    /// A slot of the encounter no enemy stands in (EncounterModel.GetNextSlot, or the code's own pick of one: Two-Tailed Rat's LastOrDefault), none
+    /// when every slot is taken.
+    /// </summary>
+    Free,
+}
+
 /// <summary>
 /// A creature an enemy's death adds to the fight (SimEnemy.Spawns): its name, and every HP it can start with, each equally likely
 /// (Creature.SetUniqueMonsterHpValue: a value in its range no other enemy has, then ScaleMonsterHpForMultiplayer). It joins with a
@@ -429,6 +445,21 @@ public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp)
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool UniqueFromEarlier { get; init; }
+
+    /// <summary>
+    /// The numbers of its own its move rules ask (decision #411: MonsterCounter, Two-Tailed Rat's TurnsUntilSummonable), as a new monster of its class has
+    /// them (read on the game's monster before it joins): what its fields start with once it has joined.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public NamedCounts Fields { get; init; } = NamedCounts.Empty;
+
+    /// <summary>Its next move as it joins, before its first roll (a new monster's NextMove, a MoveState with no move): what a teammate's rules ask of it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? NextMoveId { get; init; }
+
+    /// <summary>The slot it joins in (CreatureCmd.Add's slot), read from its code: what the encounter's free slots count (SimCounted.FreeSlots).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public SimSpawnSlot Slot { get; init; }
 
     /// <summary>
     /// Why the adapter couldn't read it (a creature its source's code adds that it can't set up or count: SimAdapter.SpawnGaps), when it couldn't: its

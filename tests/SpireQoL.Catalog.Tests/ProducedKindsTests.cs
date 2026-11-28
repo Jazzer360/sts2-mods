@@ -33,6 +33,7 @@ public class ProducedKindsTests
         ["action MoveStunAction"] = "SimAdapter.Moves: an enemy's move stunning itself (Bowlbug Rock's Headbutt when off balance)",
         ["action MoveSpawnAction"] = "SimAdapter.Moves: a creature an enemy's move adds (Fogmog's Eye with Teeth, The Obscura's Parafright)",
         ["action MovePickSpawnAction"] = "SimAdapter.Moves: a creature an enemy's move picks at random to add (Fabricator's bots, decision #379)",
+        ["action MoveCounterOfEachAction"] = "SimAdapter.Moves: an enemy's move setting a number of their own on every monster of its class (Call for Backup's CallForBackupCount)",
         ["action MoveStoreAction"] = "SimAdapter.Moves: an enemy's move setting the property its attack damage is (Waterfall Giant's About to Blow and Pressure Gun)",
         ["action UnreadAction"] = "SimAdapter.Play: a step whose code couldn't be read (unknown, never a guess)",
         ["action TriggerPoisonAction"] = "an older report's play, replayed (PoisonTriggerTests): Outbreak's poison is ModelCommandAction now",
