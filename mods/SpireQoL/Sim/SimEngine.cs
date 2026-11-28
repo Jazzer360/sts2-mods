@@ -1947,6 +1947,12 @@ public static partial class SimEngine
                             // CreatureCmd.Add of a creature its code names (decision #376): it joins now, after the turn's list of who acts.
                             // One followed in the projection only (an HP among several, and no move this turn: Two-Tailed Rat's rat) joins nothing after a play.
                             case MoveSpawnAction moveSpawnAction when !moveSpawnAction.ProjectionOnly || state.Forecasting: MoveSpawn(state, enemy, moveSpawnAction.Spawn, moveSpawnAction.AfterJoin); break;
+                            // HP, deaths, escapes and powers taken away, read from its code (decision #417).
+                            case MoveHealAction moveHealAction: foreach (var healed in moveHealAction.To) Heal(state, healed, moveHealAction.Amount); break;
+                            case MoveSetHpAction moveSetHpAction: MoveSetHp(state, moveSetHpAction); break;
+                            case MoveKillAction moveKillAction: KillEach(state, moveKillAction.To, enemy.Name); break;
+                            case MoveEscapeAction moveEscapeAction: Escape(state, moveEscapeAction.To); break;
+                            case MoveRemovePowerAction moveRemovePowerAction: foreach (var holder in moveRemovePowerAction.To) RemovePower(state, holder, moveRemovePowerAction.Power); break;
                             // A number of their own set on every enemy of a class (decision #416: Call for Backup's count), for the projection's later rolls.
                             case MoveCounterOfEachAction moveCounterOfEachAction when state.Forecasting: MoveCounterOfEach(state, moveCounterOfEachAction); break;
                             // A random pick of the creature it adds (decision #379) is a branch each before the turn (PickSpawns); one left here wasn't.
@@ -2003,7 +2009,7 @@ public static partial class SimEngine
         state.Enemies.Add(new SimEnemy
         {
             Id = id, Name = spawn.Name, Monster = spawn.Monster ?? "", Hp = spawn.Hp[0], Powers = SpawnPowers(state, spawn.Powers), AddedBy = summoner.Id,
-            InSlot = inSlot, Fields = spawn.Fields, NextMoveId = spawn.NextMoveId,
+            InSlot = inSlot, Fields = spawn.Fields, NextMoveId = spawn.NextMoveId, MaxHp = spawn.Hp[0],
         });
         foreach (var branch in AddedToCombat(state, id, spawn.JoinUnread))
             if (!ReferenceEquals(branch, state)) state.Unmodelled ??= $"a creature joining the fight in the enemy turn ({spawn.Name}) branches, which the enemy turn doesn't follow";

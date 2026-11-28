@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 34 engine rules naming 195 game methods; 3 adapter rules; 34 hand-written models.
+# 34 engine rules naming 196 game methods; 3 adapter rules; 34 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -71,8 +71,8 @@ Poison: Outbreak's trigger of every enemy's poison, and the game's preview of th
   game: PoisonPower.Trigger, PoisonPower.CalculateTotalDamageNextTurn
   simulator: SimEngine.RunModelCommand, SimEngine.PoisonTick
 Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds (each made as the game makes it: its HP none an earlier one of the same death joined with) and those an enemy's move adds (joining after the turn's list of who acts; a random one a branch per pick before the turn), the listeners told it joined (Hook.AfterCreatureAddedToCombat), a dead enemy its death's code brings back, a kill, a stun, a move set; the fight ending with no primary enemy alive unless a listener holds it back
-  game: CreatureCmd.Kill, CreatureCmd.KillWithoutCheckingWinCondition, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, Hook.AfterCreatureAddedToCombat, CreatureCmd.Stun, CombatState.CreateCreature, Creature.SetUniqueMonsterHpValue, CreatureCmd.SetMaxAndCurrentHp, CreatureCmd.SetCurrentHp, MonsterModel.SetMoveImmediate, CombatManager.IsCombatEnding, Hook.ShouldStopCombatFromEnding
-  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.MoveSpawn, SimEngine.JoinsSlot, SimEngine.PickSpawns, SimEngine.HasPick, SimEngine.PickTheirSpawns, SimEngine.SpawnPowers, SimEngine.AddedToCombat, SimEngine.Stun, SimEngine.SetMove, SimEngine.Revive, SimEngine.FightEnding, SimEngine.RunExecute, SimEngine.KillPlayer
+  game: CreatureCmd.Kill, CreatureCmd.KillWithoutCheckingWinCondition, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, Hook.AfterCreatureAddedToCombat, CreatureCmd.Stun, CombatState.CreateCreature, Creature.SetUniqueMonsterHpValue, CreatureCmd.SetMaxAndCurrentHp, CreatureCmd.SetCurrentHp, CreatureCmd.SetMaxHp, CreatureCmd.Escape, MonsterModel.SetMoveImmediate, CombatManager.IsCombatEnding, Hook.ShouldStopCombatFromEnding
+  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.MoveSpawn, SimEngine.JoinsSlot, SimEngine.PickSpawns, SimEngine.HasPick, SimEngine.PickTheirSpawns, SimEngine.SpawnPowers, SimEngine.AddedToCombat, SimEngine.Stun, SimEngine.SetMove, SimEngine.Revive, SimEngine.FightEnding, SimEngine.RunExecute, SimEngine.KillPlayer, SimEngine.MoveSetHp, SimEngine.Escape
 The fight's end inside a turn (decision #301): once no primary enemy is alive and nothing holds it back, a branch's later commands, its combat hooks, a card's later plays and the turn's end don't run
   game: Hook.IterateCombatHookListeners, CardModel.OnPlayWrapper
   simulator: SimEngine.FightOver, SimEngine.AnyEnding, SimEngine.Fighting, SimEngine.WhileFighting, SimEngine.RunWhileFighting

@@ -163,7 +163,7 @@ public static partial class SimEngine
             copy.Enemies.Add(new SimEnemy
             {
                 Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Monster = spawn.Monster ?? "", Hp = spawn.Hp[index], Powers = SpawnPowers(copy, spawn.Powers),
-                AddedBy = pending.Dead, InSlot = inSlot, Fields = spawn.Fields, NextMoveId = spawn.NextMoveId,
+                AddedBy = pending.Dead, InSlot = inSlot, Fields = spawn.Fields, NextMoveId = spawn.NextMoveId, MaxHp = spawn.Hp[index],
             });
             return copy;
         }).ToList();

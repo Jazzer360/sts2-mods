@@ -36,7 +36,11 @@ public class MoveStoreTests
         var fight = new GameFight();
         var giant = Giant(fight, "ABOUT_TO_BLOW_MOVE", steam: 41);
         var input = SimAdapter.ProjectionStart(fight.Me, fight.Combat)!;
-        var store = Assert.IsType<MoveStoreAction>(Assert.Single(input.State.Enemy(input.Ids[giant])!.Move!));
+        // Its Steam Eruption read into the store first, then taken away (PowerCmd.Remove: decision #417).
+        var move = input.State.Enemy(input.Ids[giant])!.Move!;
+        Assert.Equal(2, move.Count);
+        var store = Assert.IsType<MoveStoreAction>(move[0]);
+        Assert.Equal(PowerId.SteamEruption, Assert.IsType<MoveRemovePowerAction>(move[1]).Power);
         Assert.Equal(("Monster.WaterfallGiant.SteamEruptionDamage", PowerId.SteamEruption), (store.Field, store.OwnPower));
         var projection = SimEngine.Project(input.State, input.Turns, input.Rules);
         Assert.Equal(new[] { 41 }, projection.Of(turn: 0, input.Ids[giant], "EXPLODE_MOVE")!.AtYourTurnStart);

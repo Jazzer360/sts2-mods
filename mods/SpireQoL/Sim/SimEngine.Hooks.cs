@@ -323,7 +323,8 @@ public static partial class SimEngine
     /// <summary>
     /// CreatureCmd.Heal: a player heals up to their max HP (no hook changes a heal; one who died, or whose HP isn't known, doesn't), then
     /// Hook.AfterCurrentHpChanged is told the amount asked, however much it healed (decision #342: Red Skull takes its Strength back above its
-    /// threshold). An enemy's heal isn't simulated (its max HP isn't read): the simulation is unknown with why, never a guess (decision #92).
+    /// threshold). An enemy heals up to its max HP the same (decision #417: SimEnemy.MaxHp, read on the board); one whose max HP isn't read makes the
+    /// simulation unknown with why, never a guess (decision #92).
     /// </summary>
     public static void Heal(SimState state, int creature, int amount)
     {
@@ -336,7 +337,14 @@ public static partial class SimEngine
             TellHealed(state, creature, amount);
             return;
         }
-        if (state.Enemy(creature) is { Alive: true }) state.Unmodelled ??= "an enemy's heal (its max HP isn't read)";
+        if (state.Enemy(creature) is not { Alive: true } enemy) return;
+        if (enemy.MaxHp is not { } max)
+        {
+            state.Unmodelled ??= "an enemy's heal (its max HP isn't read)";
+            return;
+        }
+        enemy.Hp = (int)Math.Min(max, (long)enemy.Hp + amount);
+        TellHealed(state, creature, amount);
     }
 
     /// <summary>

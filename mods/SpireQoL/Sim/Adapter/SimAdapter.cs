@@ -210,6 +210,7 @@ public static partial class SimAdapter
             if (!creature.IsAlive) enemy.Hp = 0;
             // What a teammate's move rules ask of it (decision #411): its next move, unless its intent hides it, and whether it stands in a slot.
             enemy.InSlot = creature.SlotName != null && combat.Encounter?.Slots.Contains(creature.SlotName) == true;
+            enemy.MaxHp = creature.MaxHp; // what a heal is capped at (decision #417)
             if (creature.Monster is { } own)
             {
                 if (creature.IsAlive) enemy.NextMoveId = SafeString(() => own.NextMove.Intents.Any(intent => intent is HiddenIntent or UnknownIntent) ? null : own.NextMove.Id);

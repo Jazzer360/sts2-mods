@@ -235,6 +235,12 @@ public sealed class SimEnemy
     public string? NextMoveId;
     /// <summary>It stands in one of the encounter's slots (Creature.SlotName among EncounterModel.Slots): what SimCounted.FreeSlots counts.</summary>
     public bool InSlot;
+    /// <summary>Its max HP (Creature.MaxHp), what a heal is capped at (decision #417); null where it isn't read (a heal of it is then unknown).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MaxHp;
+    /// <summary>It left the fight (CreatureCmd.Escape, decision #417): gone with its powers, no death of its own (DeathHandled).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Escaped;
     /// <summary>The stunned move's code (StunStep.Move: Slumbering Beetle's WakeUpMove taking its Plating), run as it acts in the enemy turn; null: none.</summary>
     [JsonIgnore] public SimStunnedMove? StunnedMove;
 

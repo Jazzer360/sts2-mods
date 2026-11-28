@@ -57,7 +57,9 @@ public class SimKeyCoverageTests
         ["SimEnemy.UnblockedAtTurnEnd"] = "a copy of UnblockedInstances taken once your end of turn is over (that is in the key)",
         ["SimEnemy.DeathHandled"] = "follows Hp: a dead enemy's death is handled in the same step",
         ["SimEnemy.StunnedThisTurn"] = "follows Stunned, which is in the key",
-        ["SimEnemy.InSlot"] = "as the adapter read the board, false for a creature joining (whose slot isn't read): never different between branches of one run",
+        ["SimEnemy.InSlot"] = "as the adapter read the board, or the slot a joining creature's code puts it in (decision #416), the same on every branch where it joined: never different between branches of one run",
+        ["SimEnemy.MaxHp"] = "as the adapter read the board, or a joining creature's HP, changed only by a move's SetMaxHp (decision #417), which every branch where the move ran runs alike: its HP, which is keyed, differs first",
+        ["SimEnemy.Escaped"] = "set with its HP at 0 and its death handled (decision #417), both keyed: nothing the simulator runs reads it",
         ["SimState.EncounterSlots"] = "the encounter's slots, forgotten as a creature joins: the branches that differ there differ in their enemies too",
         ["SimEnemy.Rules"] = "fixed during a run, shared by every branch: the adapter's read of its move rules (decision #307)",
     };

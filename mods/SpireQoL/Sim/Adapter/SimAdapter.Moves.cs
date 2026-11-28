@@ -24,24 +24,26 @@ public static partial class SimAdapter
         ["CreatureCmd.GainBlock"] = "MoveBlockAction: block on each creature its first argument names, its amount through the game's block math",
         ["CreatureCmd.Stun"] = "MoveStunAction: the monster stunning itself (Bowlbug Rock's Headbutt when off balance), on its condition asked of its own state: its next turn's move",
         ["CreatureCmd.Add"] = "MoveSpawnAction: the monster its type argument names joins (its HP and its AfterAddedToRoom's powers read as a death's spawn is); one the move picks or makes first, adds in a loop, on a test a play can change, or gives a power once it's joined isn't followed (a reviewed gap: MoveGaps)",
+        ["CreatureCmd.Heal"] = "MoveHealAction: each creature its first argument names heals its second, up to its max HP (SimEngine.Heal, then AfterCurrentHpChanged; decision #417)",
+        ["CreatureCmd.SetMaxHp"] = "MoveSetHpAction: each creature its first argument names gets its second as its max HP, its HP no more than that (killed at 0; decision #417)",
+        ["CreatureCmd.SetMaxAndCurrentHp"] = "MoveSetHpAction: max HP and HP both set to its second argument (SetMaxHp, then SetCurrentHp; decision #417)",
+        ["CreatureCmd.Kill"] = "MoveKillAction: each creature its first argument names dies, its death's hooks as it dies (SimEngine.KillEach; Gas Bomb's test that it isn't dead yet is the kill's own; decision #417)",
+        ["CreatureCmd.Escape"] = "MoveEscapeAction: the creature leaves the fight with its powers, no death (decision #417)",
+        ["PowerCmd.Remove"] = "MoveRemovePowerAction: the power (its type argument, or the GetPower<T> it's given) off each creature it names (SimEngine.RemovePower, its AfterRemoved; decision #417)",
     };
 
     /// <summary>The commands a monster's moves and hooks call that the enemy turn doesn't follow, and why.</summary>
     internal static readonly IReadOnlyDictionary<string, string> MoveCommandsNotTranslated = new Dictionary<string, string>
     {
-        ["PowerCmd.Remove"] = "a power a move takes away (its own: Soar, Steam Eruption, Plating, its revive's): after its attack, nothing later this turn reads it",
-        ["CardPileCmd.AddToCombatAndPreview"] = "status cards put into your piles (Dazed, Slimed, Burn...): your next turn's, not this enemy turn's",
-        ["CardPileCmd.AddGeneratedCardToCombat"] = "cards put into your piles (Dazed, Beckon, Frantic Escape): your next turn's, not this enemy turn's",
-        ["CardPileCmd.RemoveFromCombat"] = "cards a move steals from your piles (Thieving Hopper): your next turn's, not this enemy turn's",
-        ["CreatureCmd.Heal"] = "HP a move heals: not followed in the enemy turn (gap)",
-        ["CreatureCmd.SetMaxHp"] = "a move's new max HP (Test Subject's respawn): not followed in the enemy turn (gap)",
-        ["CreatureCmd.SetMaxAndCurrentHp"] = "HP set as a monster joins or hatches (Decimillipede, Tough Egg): not followed (gap)",
-        ["CreatureCmd.Kill"] = "a monster killing itself after its attack (Gas Bomb, Waterfall Giant): its death isn't followed in the enemy turn (gap)",
-        ["CreatureCmd.Escape"] = "a monster fleeing (Fat Gremlin, Thieving Hopper): it leaves after its move (gap)",
-        ["ThieveryPower.Steal"] = "gold stolen (Gremlin Merc): not a fight's number",
-        ["SwipePower.Steal"] = "a card stolen (Thieving Hopper): your next turn's, not this enemy turn's",
-        ["ReattachPower.DoReattach"] = "a Decimillipede segment coming back: its next turn's (gap)",
-        ["MonsterModel.SetMoveImmediate"] = "a monster's move changed by a hook (Queen's Enrage when her Amalgam dies): not followed (gap)",
+        // Each needs a capability the enemy turn doesn't have yet (decision #417): the cards an enemy's move puts into or takes from your piles (the profiles
+        // of the cards it makes, its pick of the card it steals), a power's own method read as a step of the move, a move switched mid-turn by a hook.
+        ["CardPileCmd.AddToCombatAndPreview"] = "status cards put into your piles (Dazed, Slimed, Burn...): your next turn's, not this enemy turn's; needs the enemy turn's cards for your piles (the made card's profile)",
+        ["CardPileCmd.AddGeneratedCardToCombat"] = "cards put into your piles (Dazed, Beckon, Frantic Escape): your next turn's, not this enemy turn's; needs the enemy turn's cards for your piles (the made card's profile)",
+        ["CardPileCmd.RemoveFromCombat"] = "cards a move steals from your piles (Thieving Hopper): your next turn's, not this enemy turn's; needs the enemy turn's cards for your piles (which card it picks)",
+        ["ThieveryPower.Steal"] = "gold stolen (Gremlin Merc): not a fight's number; needs a power's own method read as a step of the move",
+        ["SwipePower.Steal"] = "a card stolen (Thieving Hopper): your next turn's, not this enemy turn's; needs a power's own method read as a step of the move",
+        ["ReattachPower.DoReattach"] = "a Decimillipede segment coming back: its next turn's; needs a power's own method read as a step of the move",
+        ["MonsterModel.SetMoveImmediate"] = "a monster's move changed by a hook (Queen's Enrage when her Amalgam dies): needs a move switched in the middle of the enemy turn for a monster that hasn't acted",
     };
 
     /// <summary>
@@ -394,6 +396,11 @@ public static partial class SimAdapter
             && (eachLoop.Condition == null || eachLoop.Condition.Literals.All(literal => FixedForTheFight(literal.Test)) && ProgramEvaluator.Holds(eachLoop.Condition, context.Board, context.Program) == true)
             && context.Board.Self is MonsterModel setter && CounterOfEach(eachLoop, itemStore, setter.GetType()) is { } counterOfEach)
             return new SimAction[] { counterOfEach };
+        // CreatureCmd.Kill on its creature not being dead yet (Gas Bomb's !base.Creature.IsDead): the kill is of a living creature only (KillEach), so the
+        // test is the kill's own (decision #417).
+        if (step is CommandStep { Command.FullName: "CreatureCmd.Kill" } guardedKill && guardedKill.Values.Count > 0 && step.Condition is { Terms: [[{ Test: QueryValue { Name: "IsDead", Of: { } dying }, Holds: false }]] }
+            && dying.ToString() == guardedKill.Values[0].ToString())
+            return MoveKill(guardedKill with { Condition = null }, context, each);
         if (step.Condition != null)
         {
             // A power or block on a condition of the monster's own state (Plow's Strength while it still has Plow: this.Creature.HasPower<PlowPower>()),
@@ -431,8 +438,81 @@ public static partial class SimAdapter
         {
             "PowerCmd.Apply" => MovePower(command, context, each),
             "CreatureCmd.GainBlock" => MoveBlock(command, context, each),
+            "CreatureCmd.Heal" => MoveHeal(command, context, each),
+            "CreatureCmd.SetMaxHp" or "CreatureCmd.SetMaxAndCurrentHp" => MoveSetHp(command, context, each),
+            "CreatureCmd.Kill" => MoveKill(command, context, each),
+            "CreatureCmd.Escape" => MoveEscape(command, context, each),
+            "PowerCmd.Remove" => MoveRemovePower(command, context, each),
             _ => Array.Empty<SimAction>(),
         };
+    }
+
+    /// <summary>The simulator ids of the creatures a command's first argument names (a creature, a list of them), or null where it can't be read.</summary>
+    private static List<int>? TargetIds(CommandStep command, MoveContext context, Creature? each) =>
+        command.Values.Count > 0 && Creatures(Value(command.Values[0], context, each)) is { } creatures ? creatures.Select(context.IdOf).OfType<int>().ToList() : null;
+
+    /// <summary>CreatureCmd.Heal(creature, amount): MoveHealAction, the amount worked out on the board (Knowledge Demon's 30 for each player).</summary>
+    private static IEnumerable<SimAction> MoveHeal(CommandStep command, MoveContext context, Creature? each)
+    {
+        if (TargetIds(command, context, each) is not { } ids || command.Values.Count < 2 || Number(Value(command.Values[1], context, each)) is not { } amount)
+        {
+            context.Gaps.Add("unread value");
+            return Array.Empty<SimAction>();
+        }
+        return ids.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new MoveHealAction((int)amount, ids) };
+    }
+
+    /// <summary>CreatureCmd.SetMaxHp(creature, amount) and SetMaxAndCurrentHp: MoveSetHpAction, the amount worked out on the board.</summary>
+    private static IEnumerable<SimAction> MoveSetHp(CommandStep command, MoveContext context, Creature? each)
+    {
+        if (TargetIds(command, context, each) is not { } ids || command.Values.Count < 2 || Number(Value(command.Values[1], context, each)) is not { } amount)
+        {
+            context.Gaps.Add("unread value");
+            return Array.Empty<SimAction>();
+        }
+        return ids.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new MoveSetHpAction((int)Math.Min(amount, 999999999m), ids, Current: command.Command.Name == "SetMaxAndCurrentHp") };
+    }
+
+    /// <summary>CreatureCmd.Kill(creature or creatures): MoveKillAction.</summary>
+    private static IEnumerable<SimAction> MoveKill(CommandStep command, MoveContext context, Creature? each)
+    {
+        if (TargetIds(command, context, each) is not { } ids)
+        {
+            context.Gaps.Add("unread value");
+            return Array.Empty<SimAction>();
+        }
+        return ids.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new MoveKillAction(ids) };
+    }
+
+    /// <summary>CreatureCmd.Escape(creature): MoveEscapeAction.</summary>
+    private static IEnumerable<SimAction> MoveEscape(CommandStep command, MoveContext context, Creature? each)
+    {
+        if (TargetIds(command, context, each) is not { } ids)
+        {
+            context.Gaps.Add("unread value");
+            return Array.Empty<SimAction>();
+        }
+        return ids.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new MoveEscapeAction(ids) };
+    }
+
+    /// <summary>
+    /// PowerCmd.Remove&lt;T&gt;(creature), or PowerCmd.Remove(power) of a creature's GetPower&lt;T&gt;() (Slumbering Beetle's Plating): MoveRemovePowerAction of
+    /// T off that creature. A power it isn't told the class of (Tough Egg's loop over its powers) is a gap.
+    /// </summary>
+    private static IEnumerable<SimAction> MoveRemovePower(CommandStep command, MoveContext context, Creature? each)
+    {
+        string? powerName = null;
+        ProgramValue? holder = null;
+        if (command.Command.GenericArguments is [var named] && command.Values.Count > 0) (powerName, holder) = (named, command.Values[0]);
+        else if (command.Values.Count > 0 && StepValues.Unstored(command.Values[0]) is QueryValue { Name: "GetPower", GenericArguments: [var fetched], Of: { } of }) (powerName, holder) = (fetched, of);
+        var powerType = powerName == null ? null : PowerType(powerName);
+        if (powerType == null || holder == null || Creatures(Value(holder, context, each)) is not { } creatures)
+        {
+            context.Gaps.Add("unread value");
+            return Array.Empty<SimAction>();
+        }
+        var ids = creatures.Select(context.IdOf).OfType<int>().ToList();
+        return ids.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new MoveRemovePowerAction(PowerId.Of(SimPowerName(powerType)), ids) };
     }
 
     /// <summary>

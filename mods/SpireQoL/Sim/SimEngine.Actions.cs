@@ -1370,6 +1370,49 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// CreatureCmd.SetMaxHp / SetMaxAndCurrentHp of a move (MoveSetHpAction, decision #417): each living enemy's max HP set (Creature.SetMaxHpInternal: none
+    /// below 0, its HP no more than it), then with Current its HP (SetCurrentHp: AfterCurrentHpChanged told a rise, as a heal's is); at 0 it dies (KillEach).
+    /// One whose max HP isn't read, or a dead one brought back, isn't followed. A projection follows no one's HP (decision #308).
+    /// </summary>
+    private static void MoveSetHp(SimState state, MoveSetHpAction set)
+    {
+        if (state.Forecasting) return;
+        foreach (var id in set.To)
+        {
+            if (state.Enemy(id) is not { } enemy) continue;
+            if (!enemy.Alive || enemy.MaxHp == null)
+            {
+                state.Unmodelled ??= enemy.Alive ? $"{enemy.Name}'s max HP isn't read, and a move sets it" : $"a move sets the HP of {enemy.Name}, which is dead";
+                continue;
+            }
+            enemy.MaxHp = Math.Max(0, set.Amount);
+            var before = enemy.Hp;
+            enemy.Hp = Math.Min(enemy.Hp, enemy.MaxHp.Value);
+            if (set.Current) enemy.Hp = Math.Min(set.Amount, enemy.MaxHp.Value);
+            if (enemy.Hp > before) TellHealed(state, id, enemy.Hp - before);
+            else if (enemy.Hp < before) state.Unmodelled ??= $"a move lowers {enemy.Name}'s HP by setting it, which the simulator doesn't tell the HP listeners of";
+            if (enemy.Hp <= 0) KillEach(state, new[] { id }, enemy.Name);
+        }
+    }
+
+    /// <summary>
+    /// CreatureCmd.Escape of a move (MoveEscapeAction, decision #417): each living enemy leaves the fight with all its powers (RemoveAllPowersInternalExcept),
+    /// no death's hooks; gone from the projection's later turns too. One with Impaled (its arrows dislodged as it leaves) isn't followed.
+    /// </summary>
+    private static void Escape(SimState state, IReadOnlyList<int> creatures)
+    {
+        foreach (var id in creatures)
+        {
+            if (state.Enemy(id) is not { Alive: true } enemy) continue;
+            if (enemy.Powers.Has(PowerId.Impaled)) state.Unmodelled ??= $"{enemy.Name} escapes with arrows in it, which the simulator doesn't dislodge";
+            enemy.Powers = PowerSet.Empty;
+            enemy.Hp = 0;
+            enemy.Escaped = true;
+            enemy.DeathHandled = true;
+        }
+    }
+
+    /// <summary>
     /// Whether a creature joining stands in one of the encounter's slots (SimSpawn.Slot, decision #416): a slot its code names that the encounter lists, or
     /// the encounter's next free one while one is free (SimCounted.FreeSlots, counted before it joins). A slot not read, or a free one counted on slots not
     /// known, leaves the free slots not known from here (decision #411).

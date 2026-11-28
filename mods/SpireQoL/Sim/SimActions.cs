@@ -293,6 +293,38 @@ public sealed record MoveSpawnAction(SimSpawn Spawn) : SimAction
 }
 
 /// <summary>
+/// CreatureCmd.Heal of a monster's move (decision #417: Knowledge Demon's Ponder, Waterfall Giant's Siphon): each creature of <paramref name="To"/> heals
+/// <paramref name="Amount"/>, up to its max HP (SimEngine.Heal: AfterCurrentHpChanged told after). A projection follows no one's HP.
+/// </summary>
+public sealed record MoveHealAction(int Amount, IReadOnlyList<int> To) : SimAction;
+
+/// <summary>
+/// CreatureCmd.SetMaxHp (<paramref name="Current"/> false) or SetMaxAndCurrentHp (true) of a monster's move (decision #417: Test Subject's revive, Tough Egg's
+/// hatch): each enemy of <paramref name="To"/> gets <paramref name="Amount"/> as its max HP, its HP no more than that; with Current, its HP that too
+/// (AfterCurrentHpChanged told the change). At 0 it dies. A projection follows no one's HP.
+/// </summary>
+public sealed record MoveSetHpAction(int Amount, IReadOnlyList<int> To, bool Current) : SimAction;
+
+/// <summary>
+/// CreatureCmd.Kill of a monster's move (decision #417: Gas Bomb and Waterfall Giant after their attack): each creature of <paramref name="To"/> not dead
+/// yet dies, its death's hooks as it dies (SimEngine.KillEach). A projection follows no one's death (decision #308).
+/// </summary>
+public sealed record MoveKillAction(IReadOnlyList<int> To) : SimAction;
+
+/// <summary>
+/// CreatureCmd.Escape of a monster's move (decision #417: Fat Gremlin, Thieving Hopper): each enemy of <paramref name="To"/> alive leaves the fight, its
+/// powers removed with it, no death hooks (CreatureCmd.Escape: RemoveAllPowersInternalExcept, then CombatState.CreatureEscaped). One with Impaled
+/// (its arrows dislodged as it goes) isn't followed. The projection's later turns have it gone.
+/// </summary>
+public sealed record MoveEscapeAction(IReadOnlyList<int> To) : SimAction;
+
+/// <summary>
+/// PowerCmd.Remove of a monster's move (decision #417: Owl Magistrate's Soar, Waterfall Giant's Steam Eruption, Tough Egg's Hatch): <paramref name="Power"/>
+/// off each creature of <paramref name="To"/> (SimEngine.RemovePower: its AfterRemoved told), the projection's later turns too.
+/// </summary>
+public sealed record MoveRemovePowerAction(PowerId Power, IReadOnlyList<int> To) : SimAction;
+
+/// <summary>
 /// A number of their own a move sets on every enemy of a class (decision #416: Call for Backup's ForEach over the rats, each's CallForBackupCount the most
 /// of theirs plus one): each living enemy of <paramref name="Monster"/> gets the most of their <paramref name="Field"/> plus <paramref name="MostPlus"/>.
 /// One of them not holding it forgets it on all. Only a projection runs it (SimState.Forecasting), as MoveStoreAction.
