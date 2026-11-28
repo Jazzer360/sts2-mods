@@ -8,11 +8,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 2.0.2
 #### Changed
+- Multiplayer: hovering a teammate hides your own Incoming Damage while theirs shows beside them (not while you hold a card, where yours is that card's preview).
 - Intent Details and Intent Forecast: the buffs and debuffs a move applies sit in the top-left corner of their intent, larger, so they no longer cover an attack's damage (a multi-hit's `9x5`).
 - Session summaries count the frames during fights where the mod took longer than a frame at 165 fps (6 ms): how many, the longest run of them, which part of the mod took the time, and the fights' frame rate.
 
 #### Fixed
 - Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- Rest Preview in multiplayer: your sum sits beside your character when you sit right of the fire (it showed off to the side, above it), and hovering a teammate there finds them.
 - Intent Details and Intent Forecast in multiplayer: a buff an enemy's move gives it shows the amount it lands with, scaled for the players in the fight (Thieving Hopper's Flutter showed 5 and landed 12; Plating, Artifact, Regen and the others that scale).
 - Error reports from a card's or an enemy's prediction that failed name where in the prediction it failed (they named only the line that passed the failure on).
 - The play audit no longer reports Legion of Bone in multiplayer as making fewer summons than predicted: it summons each player once, and the prediction is counted the same way.

@@ -59,6 +59,9 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     {
         // The held card's turn while you hold one (Play Preview, decision #183), else ending it now.
         var forecast = Sts2State.IsPlayerTurn ? PlayPreview.Model(_ctx) : null;
+        // Hovering a teammate (multiplayer): theirs shows beside them (Teammate Incoming Damage) and yours steps aside, so a crowded board shows one;
+        // not while you hold a card (aiming it at them focuses them too), where yours is that card's preview.
+        if (forecast is { IsPreview: false } && Sts2State.FocusedTeammate() != null) forecast = null;
         if (forecast == null || (!forecast.Unknown && forecast.ExtraTurnFrom == null && forecast.BlockableTotal == 0 && forecast.UnblockableTotal == 0))
         {
             _widget!.HasContent = false;

@@ -286,8 +286,19 @@ public static class Sts2State
     /// <summary>A control's rect in viewport (screen) coordinates, accounting for cameras and canvas layers.</summary>
     public static Godot.Rect2 ScreenRect(Godot.Control control)
     {
+        // The box of its four corners on screen: a mirrored control (a rest-site character on the right of the fire, flipped to face it) has a
+        // transform whose Scale puts the mirror's minus sign on Y, so origin plus Size * Scale gave a box above it and off to the side.
         var transform2D = control.GetGlobalTransformWithCanvas();
-        return new Godot.Rect2(transform2D.Origin, control.Size * transform2D.Scale);
+        var size = control.Size;
+        var topLeft = transform2D * Godot.Vector2.Zero;
+        var topRight = transform2D * new Godot.Vector2(size.X, 0);
+        var bottomLeft = transform2D * new Godot.Vector2(0, size.Y);
+        var bottomRight = transform2D * size;
+        var min = new Godot.Vector2(Math.Min(Math.Min(topLeft.X, topRight.X), Math.Min(bottomLeft.X, bottomRight.X)),
+            Math.Min(Math.Min(topLeft.Y, topRight.Y), Math.Min(bottomLeft.Y, bottomRight.Y)));
+        var max = new Godot.Vector2(Math.Max(Math.Max(topLeft.X, topRight.X), Math.Max(bottomLeft.X, bottomRight.X)),
+            Math.Max(Math.Max(topLeft.Y, topRight.Y), Math.Max(bottomLeft.Y, bottomRight.Y)));
+        return new Godot.Rect2(min, max - min);
     }
 
     /// <summary>

@@ -245,7 +245,8 @@ public sealed partial class SettingsMenu
             damageMathPanel => damageMathPanel.ShowExtraTurn(Relic<PaelsEye>(), progress: null));
         _rows!.AddChild(flow);
         Paragraph("Teammate Incoming Damage: in multiplayer, hover a teammate to see theirs beside their HP bar, worked out the same way "
-            + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand, unless Count teammates' hands is on).");
+            + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand, unless Count teammates' hands is on). "
+            + "Yours steps aside while you hover them, unless you're holding a card.");
     }
 
     private static void IncomingCell(HFlowContainer flow, string title, string text, Action<DamageMathPanel> show)

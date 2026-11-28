@@ -141,8 +141,11 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         _matePanel = new RestMathPanel(_mate.Content);
     }
 
-    /// <summary>The character places logged, by rounded position (a number pair: a text key made garbage on every frame's layout).</summary>
-    private static readonly HashSet<(int X, int Y)> SidesLogged = new();
+    /// <summary>
+    /// The character places logged, by side and size (a number triple: a text key made garbage on every frame's layout). Not by position: a
+    /// character's idle animation moves it every frame, and a line a frame filled the log.
+    /// </summary>
+    private static readonly HashSet<(bool Right, int Width, int Height)> SidesLogged = new();
 
     /// <summary>
     /// The character's rect when it sits on that half of the screen (right: its centre right of the screen's middle), else null:
@@ -153,7 +156,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         if (character is not { } rect || NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) return null;
         var middle = room.GetViewportRect().Size.X / 2;
         var onRight = rect.GetCenter().X > middle;
-        if (SidesLogged.Add(((int)Math.Round(rect.Position.X), (int)Math.Round(rect.Position.Y)))) ModEntry.Log.Detail($"rest preview: character at {rect.Position}, {rect.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
+        if (SidesLogged.Add((onRight, (int)Math.Round(rect.Size.X), (int)Math.Round(rect.Size.Y)))) ModEntry.Log.Detail($"rest preview: character at {rect.Position}, {rect.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
         return onRight == right ? rect : null;
     }
 
