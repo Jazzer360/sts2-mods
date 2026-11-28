@@ -76,6 +76,7 @@ internal static class MovePowers
             {
                 var amount = Evaluate(monster, call.Constant, call.Getter, call.Combined);
                 if (call.Negated && amount is { } positive) amount = -positive; // -SpikenAmount: Toadpole's Spike Spit takes its Thorns away
+                if (amount is { } given) amount = ScaledForPlayers(monster, call.Power, given);
                 result.Add(new Applied(call.Power, amount, Maybe: !call.Certain));
             }
             if (result.Any(applied => applied.Maybe))
@@ -89,6 +90,27 @@ internal static class MovePowers
             // unreadable: no powers shown
         }
         return result;
+    }
+
+    /// <summary>
+    /// A buff a move gives the enemy side as PowerCmd.Apply lands it in a fight of more than one player: the power's own GetScaledAmountForMultiplayer
+    /// when its ShouldScaleInMultiplayer is true (the game's code, called on its canonical model), else as the move gives it. A dev review: Thieving
+    /// Hopper's Flutter showed 5 in a two-player fight and landed 12. A debuff lands on a player, which PowerCmd.Apply never scales.
+    /// </summary>
+    private static decimal ScaledForPlayers(MonsterModel monster, Type power, decimal amount)
+    {
+        try
+        {
+            // A canonical monster (the moves read outside a fight) has no creature: as the move gives it.
+            if (monster.IsCanonical || monster.Creature is not { CombatState: { } combat } creature || combat.Players.Count <= 1) return amount;
+            var canonical = ModelDb.GetById<PowerModel>(ModelDb.GetId(power));
+            if (!canonical.ShouldScaleInMultiplayer || canonical.Type != MegaCrit.Sts2.Core.Entities.Powers.PowerType.Buff) return amount;
+            return canonical.GetScaledAmountForMultiplayer(combat, creature, amount, creature, cardSource: null);
+        }
+        catch
+        {
+            return amount; // its scaling couldn't be asked: the move's own amount, as before
+        }
     }
 
     /// <summary>One CreatureCmd.GainBlock call of a move on its own enemy (base.Creature): its amount, as for powers, and its props.</summary>

@@ -13,6 +13,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- Intent Details and Intent Forecast in multiplayer: a buff an enemy's move gives it shows the amount it lands with, scaled for the players in the fight (Thieving Hopper's Flutter showed 5 and landed 12; Plating, Artifact, Regen and the others that scale).
 - Error reports from a card's or an enemy's prediction that failed name where in the prediction it failed (they named only the line that passed the failure on).
 - The play audit no longer reports Legion of Bone in multiplayer as making fewer summons than predicted: it summons each player once, and the prediction is counted the same way.
 - The Shuffle tag showed a blank tab, without its discard-pile icon, in every fight after the game unloaded the art it was taken from.
