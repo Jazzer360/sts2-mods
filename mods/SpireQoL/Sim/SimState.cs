@@ -1212,6 +1212,8 @@ public sealed class SimState
     /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
     internal SimCardPlay? CurrentPlay;
     internal int AttackSerial, CurrentAttack;
+    /// <summary>The hit of an enemy's attack being dealt (its index: every player takes it before the next), while the enemy turn runs it (Suck's hits).</summary>
+    internal int CurrentHit;
     /// <summary>The enemy turn is under way (the players' side's turn is over: Inferno doesn't react).</summary>
     internal bool EnemyTurnNow;
     /// <summary>

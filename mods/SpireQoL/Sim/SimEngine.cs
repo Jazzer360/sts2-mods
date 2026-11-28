@@ -1369,6 +1369,7 @@ public static partial class SimEngine
             case TakeToHandAction takeToHandAction: branches.Each(branch => RunTakeToHand(branch, takeToHandAction)); break;
             case ExhaustFromHandAction exhaustFromHandAction: branches.Each(branch => RunExhaustFromHand(branch, exhaustFromHandAction)); break;
             case LeaveHandAction leaveHandAction: branches.Do(branch => RunLeaveHand(branch, leaveHandAction)); break;
+            case PickDiscardOntoDrawTopAction: branches.Do(PickDiscardOntoDrawTop); break;
             case TakeFromHandAction takeFromHandAction: RunTakeFromHand(branches, takeFromHandAction); break;
             case NotModelledAction notModelledAction: branches.Do(branch => branch.Unmodelled ??= notModelledAction.Reason); break;
             case KeepTargetDebuffsAction: branches.Do(KeepTargetDebuffs); break;
@@ -1904,6 +1905,7 @@ public static partial class SimEngine
                         state.CancelledHits++;
                         continue;
                     }
+                    state.CurrentHit = hit;
                     if (enemy.ProjectedMove != null) LandsOnYou(state, enemy, perHit); // a projected turn's hit, for the forecast (decision #304)
                     foreach (var player in players)
                     {

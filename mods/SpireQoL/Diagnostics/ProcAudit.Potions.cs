@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Actions;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -27,6 +28,18 @@ public sealed partial class ProcAudit
         public IReadOnlyDictionary<Creature, int>? AfterIds { get; set; }
         /// <summary>Why it isn't checked (counted), or null.</summary>
         public string? Skipped { get; set; }
+        /// <summary>
+        /// Another action that started while the potion waited for your choice (a teammate's play, in multiplayer: Colorless Potion's pick), or null:
+        /// its effects are in the state the potion left, so differences are logged, not reported, as a play's are (ProcAudit.Report).
+        /// </summary>
+        public string? RanDuringPause { get; set; }
+    }
+
+    /// <summary>Another action starting: noted on each potion of yours waiting for your choice.</summary>
+    private void PotionPausedFor(GameAction action)
+    {
+        foreach (var (potion, record) in _potions)
+            if (!ReferenceEquals(potion, action) && potion.State == GameActionState.GatheringPlayerChoice) record.RanDuringPause ??= DescribeAction(action);
     }
 
     private readonly Dictionary<GameAction, PotionRecord> _potions = new(ReferenceEqualityComparer.Instance);
@@ -123,6 +136,12 @@ public sealed partial class ProcAudit
             .OrderBy(differences => differences.Count).First();
         var note = branches!.Count > 1 ? $" (closest of {branches.Count} branches)" : "";
         issues.AddRange(best.Select(difference => difference + note));
+        if (issues.Count > 0 && record.RanDuringPause != null)
+        {
+            ModEntry.Log.Detail($"[audit] [potion] {record.Name}: outcome not checked (another action ran during your choice: {record.RanDuringPause}: {string.Join("; ", issues)})");
+            Telemetry.Audits.Skipped(Telemetry.Audits.Potion, "another action ran during your choice", record.Name);
+            return;
+        }
         ModEntry.Log.Detail($"[audit] [potion] {record.Name}: outcome {(issues.Count == 0 ? "matched" : string.Join("; ", issues))}");
         Telemetry.Audits.Done(Telemetry.Audits.Potion, issues.Count == 0, issues.Count == 0 ? record.Name : issues[0].Split(':')[0]);
         if (issues.Count == 0) return;

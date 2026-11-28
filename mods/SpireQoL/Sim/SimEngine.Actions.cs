@@ -107,9 +107,12 @@ public static partial class SimEngine
         // The card goes where the shape said (CardPlay.ResultPile): back on top of its owner's hand (Feral), keeping its slot; one from your hand on top of
         // its owner's draw pile (Rebound, Nostalgia), into their discard pile, or into their exhaust pile. One auto-played from a pile keeps its location for
         // the pile move after it (SimEngine.PlayFromPile; the frame it puts back clears it).
+        // Once the fight is ending, the move does nothing (CardPileCmd.Add into a combat pile returns while CombatManager.IsEnding): the card stays in the
+        // play pile (a dev review: Mourning Blow's kill left it out of your hand).
         branches.Do(branch =>
         {
-            if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
+            if (FightOver(branch)) { }
+            else if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
             else if (cardPlayAction is { FromHand: true, FromPile: false })
                 switch (branch.PlayResultLocation)
                 {
@@ -559,6 +562,27 @@ public static partial class SimEngine
             : pile.WithoutTopAt(pile.Top.FindIndex(top => top.Key == card.Key));
         return card.Exhausting is { } acting ? ProcCardEvent(state, CardEvent.EnergyGained, acting.Energy, owner, indirect: false) : new[] { state };
     }
+
+    /// <summary>
+    /// A card you pick from your discard pile goes on top of your draw pile (Wah Ki, Cosmic Indifference), so a draw after it draws that card, not a
+    /// shuffle. Which card is your later decision (decision #167): a plain one when the pile has one, else the one profile it holds; when its cards
+    /// differ and the simulation follows each, it's a card of unknown kind there (SimDrawCard.Unread: drawn, the branch is unknown), taken from the
+    /// discard pile's largest profile so its count is right. None to pick: nothing moves. With no pile read, nothing (only counts would move).
+    /// </summary>
+    private static void PickDiscardOntoDrawTop(SimState state)
+    {
+        var owner = state.CurrentPlay?.Owner ?? Who.You;
+        if (!DrawsFromPile(state, owner)) return;
+        var pile = state.Player(owner)!.Draw!;
+        if (pile.Discard.Count == 0) return;
+        var index = pile.Discard.FindIndex(group => group.Card.Plain);
+        if (index < 0 && pile.Discard.Count == 1) index = 0;
+        var card = index >= 0 ? pile.Discard[index].Card : new SimDrawCard(UnreadPick) { Unread = UnreadPick };
+        if (index < 0) index = pile.Discard.IndexOf(pile.Discard.MaxBy(group => group.Count)!);
+        state.MutablePlayer(owner).Draw = pile.WithoutOneDiscarded(index).WithTopAt(index: 0, card);
+    }
+
+    private const string UnreadPick = "you choose which card of your discard pile goes on top of your draw pile, and the simulation follows each of them";
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>
     private static void Count(SimState state, SimCardPlay play, PlayStage stage)

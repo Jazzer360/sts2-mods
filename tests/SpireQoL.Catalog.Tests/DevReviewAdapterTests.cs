@@ -183,4 +183,22 @@ public class DevReviewAdapterTests
         var play = SimAdapter.Play(photon, fight.Me, fight.Combat, ids, targetId: ids[enemy]);
         Assert.Contains(play.Body, action => action is NotModelledAction);
     }
+
+    [Fact]
+    public void WahKisPickFromYourDiscardPileGoesOnTopOfYourDrawPile()
+    {
+        // The owner's Fool run: Wah Ki with an empty draw pile, then Motif drew the card it put on top; the Shuffle tab said that draw would shuffle.
+        var fight = new GameFight();
+        var wahKi = fight.Add<WahKi>(upgraded: true);
+        fight.Add<StrikeIronclad>(PileType.Discard);
+        fight.Add<DefendIronclad>(PileType.Discard);
+        var enemy = fight.Combat.CreateCreature(ModelDb.Monster<Seapunk>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(enemy);
+        var start = SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        var play = SimAdapter.Play(wahKi, fight.Me, fight.Combat, ids, targetId: ids[enemy]);
+        Assert.Contains(play.Body, action => action is PickDiscardOntoDrawTopAction);
+        SimEngine.ApplyPlayTo(start, play, out var branches, out _);
+        Assert.All(branches, branch => Assert.Equal(1, branch.You.Draw!.Count));
+        Assert.All(branches, branch => Assert.Null(branch.Unmodelled));
+    }
 }

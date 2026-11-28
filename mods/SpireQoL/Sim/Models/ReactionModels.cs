@@ -19,6 +19,65 @@ namespace SpireQoL.Sim.Models;
 // Curl Up is read from its code (ReadModel, decision #274).
 
 /// <summary>
+/// SuckPower (decompile v0.114.0: Fossil Stalker's): after its owner's own attack on the other side (AfterAttack, a powered attack: a move's), Strength of
+/// its amount for each of the attack's hits that got HP through on anyone it hit (each hit's results over every player; a hit on a pet leaves out its
+/// owner's result). A dev review: Lash's two hits got through, Fossil Stalker gained 6 Strength, and its next Latch hit for 18 where 12 was projected.
+/// Its Data while the attack runs: the hit being followed (index + 1, bits 16 to 23), the hits counted (bits 24 and up), and that hit's players: those it
+/// got HP through to (bits 0 to 7: you 0, teammate k k + 1), those whose pet it landed on (bits 8 to 15). Cleared as the attack ends.
+/// </summary>
+public sealed class SuckPower : SimModel
+{
+    private const int HitShift = 16, CountShift = 24, PetShift = 8, PlayersMask = 0xFF, HitMask = 0xFF << HitShift, OneHit = 1;
+    /// <summary>A pet's own result through (its owner's place among the players' bits, never masked by a pet's hit).</summary>
+    private const int PetThrough = 1 << 7;
+
+    private static int PlayerBit(int player) => 1 << (player == Who.You ? 0 : 1 + Who.TeammateIndex(player));
+
+    /// <summary>A hit's results through to anyone, its pets' owners left out (a pet's own result counts, in its owner's place).</summary>
+    private static bool HitGotThrough(int data) => (data & PlayersMask & ~((data >> PetShift) & PlayersMask)) != 0;
+
+    /// <summary>The followed hit closed: counted when it got through, its players cleared.</summary>
+    private static int Closed(int data) =>
+        ((data >> CountShift) + (HitGotThrough(data) ? OneHit : 0)) << CountShift | (data & HitMask);
+
+    public override IEnumerable<SimState> BeforeAttack(SimState state, int owner, AttackInfo attack)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        if (attack.Dealer == owner && powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: 0));
+        return One(state);
+    }
+
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Dealer != owner || state.CurrentAttack == 0 || !Who.IsEnemy(owner) || Who.IsEnemy(hit.Target)) return;
+        var powers = SimEngine.PowersOf(state, owner);
+        if (!powers.Has(ThisPower)) return;
+        var data = powers.DataOf(ThisPower);
+        if ((data & HitMask) >> HitShift != state.CurrentHit + OneHit) data = Closed(data) & ~HitMask | (state.CurrentHit + OneHit) << HitShift;
+        if (Who.IsPet(hit.Target))
+        {
+            var petOwner = Who.PetOwnerOf(hit.Target);
+            if (petOwner != Who.None) data |= PlayerBit(petOwner) << PetShift;
+            // The pet's own result: through when it lost HP, standing in for its owner's.
+            if (hit.Unblocked > 0 && petOwner != Who.None) data |= PetThrough;
+        }
+        else if (hit.Unblocked > 0 && Who.IsPlayer(hit.Target)) data |= PlayerBit(hit.Target);
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data));
+    }
+
+    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
+    {
+        if (attack.Dealer != owner || !attack.Props.Has(SimProps.Move) || state.Enemy(owner) is not { } enemy || !enemy.Powers.Has(ThisPower)) return One(state);
+        var data = enemy.Powers.DataOf(ThisPower);
+        var hits = data == 0 ? 0 : Closed(data) >> CountShift;
+        enemy.Powers = enemy.Powers.With(ThisPower, enemy.Powers[ThisPower], data: 0);
+        if (hits == 0) return One(state);
+        state.LogFired(Name, amount: 0, owner);
+        return SimEngine.ApplyAndTell(state, owner, owner, PowerId.Strength, enemy.Powers[ThisPower] * hits, debuff: false);
+    }
+}
+
+/// <summary>
 /// SkittishPower: once per turn (Data bit 1), after an attack from a card (a Move) whose first hit on its owner got HP through
 /// (bit 4; bit 2 marks the first hit seen this attack), it gains its amount of block (AfterAttack).
 /// </summary>

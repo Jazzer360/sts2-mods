@@ -14,6 +14,8 @@ public class SimModelOwnerScanTests
     /// <summary>A fragment of each reviewed line, and why naming you there is right.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
+        ["private static int PlayerBit(int player) => 1 << (player == Who.You ? 0"] = "Suck's Data names each player its hit reached by a bit (you and each teammate by id), not the owner",
+        ["player == (branch.CurrentPlay?.Owner ?? Who.You)"] = "a card made into the playing player's hand by someone else, logged as that play's: the play's owner (you outside a play), not the model's",
         ["private static int SlotOf(int applier) => applier == Who.You ? 0"] = "Tag Team's Data names each applier's slot (one copy per applier, instanced): you and each teammate by id, not the owner",
         ["state.CurrentPlay is not { Owner: Who.You }"] = "ImpaledPower is your arrows in an enemy, counted down by the hits from your cards (a teammate's arrows are TeammatesImpaledPower)",
         ["CardEvent.ArrowDislodged, Who.You"] = "ImpaledPower is your arrows: they come back to you",

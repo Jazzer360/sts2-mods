@@ -42,4 +42,15 @@ public class OwnResultLocationTests
         var after = Assert.Single(After(Board(), Blow(new Dictionary<SimResultLocation, SimResultLocation>(), unknown: "another player's pile")));
         Assert.Equal("another player's pile", after.Unmodelled);
     }
+
+    [Fact]
+    public void AKillThatEndsTheFightLeavesItOutOfYourHand()
+    {
+        // A dev review of the owner's Fool run: Mourning Blow killed the last enemy; CardPileCmd.Add into a combat pile returns while the fight is
+        // ending, so the card stays in the play pile, not your hand (5 cards, where 6 was predicted).
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 8) } };
+        state.You.HandCount = 2;
+        var after = Assert.Single(After(state, Blow(new Dictionary<SimResultLocation, SimResultLocation> { [SimResultLocation.Default] = SimResultLocation.HandTop })));
+        Assert.Equal(2, after.You.HandCount);
+    }
 }

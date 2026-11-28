@@ -367,7 +367,7 @@ internal static partial class CoverageLedger
         ["StranglePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to a card its applier (a player) plays; AfterCardPlayed deals it to its owner (unblockable, no dealer)",
         ["StratagemPower"] = "covered: AfterShuffle picks cards (proc tab on shuffles)",
         ["SubroutinePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to a Power played, AfterCardPlayed gives that much energy, one at a time (proc tab)",
-        ["SuckPower"] = "ignore: AfterAttack Strength after its own attack (later attacks)",
+        ["SuckPower"] = "covered: AfterAttack Strength of its amount for each hit of its own attack that got HP through on anyone (simulator: the intent projection's later attacks; the forecast audit leaves its Strength out of the move's own powers)",
         ["SurprisePower"] = "covered: AfterDeath effect (crossed kill tab from the simulator); the gremlins it adds read from its code (SimAdapter.SpawnsOf: each CreatureCmd.Add, its monster's HP range and starting powers, and the Heist it gives its Fat Gremlin for each Thievery, decision #346); ShouldStopCombatFromEnding true",
         ["SurroundedPower"] = "covered: BeforeCardPlayed turns you to face a back-attacking target; AfterDeath turns you to face the first enemy left when all are on one side; BeforePotionUsed turns you to face a back-attacking potion target (decision #313); ModifyDamageMultiplicative: the one behind you hits 50% harder (intents after your targeted play or potion, or a kill)",
         ["SwipePower"] = "ignore: BeforeDeath returns a stolen card",

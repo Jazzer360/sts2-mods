@@ -13,6 +13,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- The Shuffle tag showed a blank tab, without its discard-pile icon, in every fight after the game unloaded the art it was taken from.
+- Wah Ki (and Cosmic Indifference) put the card you pick from your discard pile on top of your draw pile, so a draw after it draws that card: the Shuffle tag no longer says that draw shuffles your discard pile in when your draw pile is empty.
+- Intent Forecast: Fossil Stalker's Suck gives it Strength for each hit of its attack that gets through, so its next attack is forecast with it (18, not 12).
+- Mourning Blow that wins the fight no longer counts itself back in your hand: the game moves no card once the fight is over.
+- The play audit no longer reports the Wither Withering Presence makes as an unexplained created card.
+- Multiplayer: after you die with a teammate alive, the forecast audit waits for the enemy turn to end before checking your teammate (it checked at your death, before the enemy's later hits on them), and no longer reports your death again on the turns after it; the potion audit no longer reports what a teammate did while you chose a card (Colorless Potion); the forecast audit no longer reports the Strength an enemy's own power gives it during its move (Suck) as a power its intent didn't show.
 - Punch of Joy's preview shows what it does instead of `?`: it counts the Sadness in your hand it turns into Joy.
 - Mourning Blow and Particle Wall go back into your hand once played, and Shining Strike onto your draw pile's top, as their own code sends them: the preview counted them discarded.
 - Intent Forecast: the Two-Tailed Rat's next intent shows Call for Backup the turn it becomes possible, not a turn late: the chances of its moves are read from its code and worked out after its move counts down its wait, and a rat rolling after another that may call for backup counts that roll.

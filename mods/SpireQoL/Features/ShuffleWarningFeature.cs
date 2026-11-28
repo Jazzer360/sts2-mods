@@ -35,10 +35,13 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
 
     private TabSpec? _shuffleTab;
 
-    /// <summary>The tab, made once its icon is loaded: a new one for each card on every frame was garbage (decision #177).</summary>
+    /// <summary>
+    /// The tab, made once its icon is loaded: a new one for each card on every frame was garbage (decision #177). Kept while its icon is: the
+    /// discard pile button's texture is freed with the room's art, and a tab kept past that drew blank in every later fight (a dev review).
+    /// </summary>
     private TabSpec ShuffleTab()
     {
-        if (_shuffleTab != null) return _shuffleTab;
+        if (_shuffleTab != null && GameIcons.Valid(_shuffleTab.Icon)) return _shuffleTab;
         var tab = new TabSpec("shuffle", GameIcons.DiscardPile());
         if (tab.Icon != null) _shuffleTab = tab;
         return tab;

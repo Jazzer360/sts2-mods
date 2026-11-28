@@ -42,7 +42,7 @@ public class SimKeyCoverageTests
         ["SimState.PlayBiggestHit"] = Merged, ["SimState.Fired"] = Merged, ["SimState.FiredAny"] = Merged, ["SimState.Flashed"] = Merged, ["SimState.FlashedAny"] = Merged,
         // Inside one step only.
         ["SimState.IndirectNow"] = Scratch, ["SimState.EtherealNow"] = Scratch, ["SimState.CurrentPlay"] = Scratch, ["SimState.AttackSerial"] = Scratch,
-        ["SimState.CurrentAttack"] = Scratch, ["SimState.EnemyTurnNow"] = Scratch, ["SimState.SideEnding"] = Scratch, ["SimState.SideStarting"] = Scratch,
+        ["SimState.CurrentAttack"] = Scratch, ["SimState.CurrentHit"] = Scratch, ["SimState.EnemyTurnNow"] = Scratch, ["SimState.SideEnding"] = Scratch, ["SimState.SideStarting"] = Scratch,
         ["SimState.HandLeftOut"] = "the same in every branch of a search: set as a projection's next turn starts, never in a card's simulation (decision #306)",
         ["SimState.EndOfTurnNow"] = Scratch, ["SimState.Bound"] = Scratch, ["SimState.Pending"] = Scratch, ["SimState.PendingIntoDraw"] = Scratch, ["SimState.PendingSpawns"] = Scratch, ["SimState.PendingPowers"] = Scratch, ["SimState.AttackDealt"] = Scratch, ["SimState.ArrowAwayAt"] = Scratch,
         ["SimState.EventCard"] = Scratch, ["SimState.PlayEvents"] = Scratch, ["SimState.PlayCardBlockGains"] = Scratch,

@@ -66,6 +66,8 @@ public class SimMadeInHandTests
         Assert.Equal(5, after.You.HandCount);
         Assert.Equal(0, after.You.Block);
         Assert.False(after.Fired.Has(PowerId.PillarOfCreation.Name));
+        // Still a card made into your hand during the play: the play audit counts it whoever made it (a dev review: "1 more created cards than the card's own 0").
+        Assert.True(after.Fired.Has(SimKeys.PlayEvent(CardEvent.Generated)));
     }
 
     [Fact]

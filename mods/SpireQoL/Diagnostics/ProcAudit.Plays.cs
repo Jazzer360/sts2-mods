@@ -235,6 +235,7 @@ public sealed partial class ProcAudit
             foreach (var playRecord in _running.Values)
                 if (playRecord.Paused && !ReferenceEquals(playRecord.Action, action))
                     playRecord.RanDuringPause ??= DescribeAction(action);
+            PotionPausedFor(action);
             // A potion of yours (decision #313): its outcome is checked on its own.
             if (action is UsePotionAction potionAction && potionAction.Player == Sts2State.Me) PotionStarting(potionAction);
             if (action is not PlayCardAction play || play.Player != Sts2State.Me)

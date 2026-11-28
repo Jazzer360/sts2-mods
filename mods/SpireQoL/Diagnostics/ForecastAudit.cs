@@ -73,6 +73,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     }
 
     private void OnYouDied(MegaCrit.Sts2.Core.Entities.Creatures.Creature creature) => _youDied = true;
+
+    /// <summary>A teammate of yours still alive (multiplayer): the fight goes on past your death.</summary>
+    private static bool TeammateAlive(Player me) => Sts2State.Combat is { } combat && combat.Players.Any(player => player != me && player.Creature.IsAlive);
     private void OnYouRevived(MegaCrit.Sts2.Core.Entities.Creatures.Creature creature) => _youDied = false;
 
     private TurnEndModel? _frozen;
@@ -321,7 +324,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             }
             // A power on a creature the move spawned is part of the summon (its Summon intent), not a buff or debuff: the Fabricator's
             // bots get Minion as it makes them (a dev review report).
-            foreach (var type in applied.Where(powerReceivedEntry => powerReceivedEntry.Actor is not { } receiver || _onBoard.Contains(receiver))
+            // A power the enemy gives itself through one of its own powers' code (Suck's Strength after its attack: AfterAttack) isn't the move's:
+            // Intent Details shows what the move's code applies, and the simulator follows the power's (the projected damage holds it to that).
+            var ownPowers = creature.Powers.Select(power => power.GetType()).ToList();
+            bool FromItsOwnPower(PowerReceivedEntry powerReceivedEntry) =>
+                powerReceivedEntry.Actor == creature && ownPowers.Any(own => own != powerReceivedEntry.Power.GetType() && ProcAudit.PowersAppliedInCode(own).Contains(powerReceivedEntry.Power.GetType()));
+            foreach (var type in applied.Where(powerReceivedEntry => (powerReceivedEntry.Actor is not { } receiver || _onBoard.Contains(receiver)) && !FromItsOwnPower(powerReceivedEntry))
                          .Select(powerReceivedEntry => powerReceivedEntry.Power.GetType()).Distinct().Where(type => shown.Powers.All(power => power.Power != type)))
                 issues.Add($"intent power: {name}'s {shown.MoveId} applied {type.Name}, not shown");
         }
@@ -340,12 +348,16 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
-        // You died before your next turn: the fight ends without one, so check the turn now, with what happened up to your death. A
-        // death is the game's Died event, not HP 0: a death something prevents passes through 0 before its heal.
+        // You died before your next turn with no teammate alive: the fight ends without one, so check the turn now, with what happened up to your
+        // death. With a teammate alive the enemy turn goes on (its later hits on them: a dev review, a teammate's HP lost checked before Aeonglass's
+        // second hit), so it's checked as the players' next turn starts, holding you to your death. A death is the game's Died event, not HP 0: a
+        // death something prevents passes through 0 before its heal.
         Watch(me?.Creature);
-        if (HasFrozen && _history != null && me != null && _youDied) CheckFrozen(_history, me, youDied: true);
+        if (HasFrozen && _history != null && me != null && _youDied && !TeammateAlive(me)) CheckFrozen(_history, me, youDied: true);
         if (me == null || !Sts2State.InCombat)
         {
+            // You died, then your teammates (the fight lost before a next turn): the turn is checked with what happened.
+            if (HasFrozen && _history != null && me != null && _youDied) CheckFrozen(_history, me, youDied: true);
             Summarize();
             Unfreeze(cancel: true);
             _wasPlayerTurn = false;
@@ -365,7 +377,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (playerTurn)
         {
             // A frozen forecast from the previous turn: the enemy turn is over, compare.
-            if (HasFrozen && Sts2State.TurnNumber > _frozenTurn) CheckFrozen(history, me);
+            if (HasFrozen && Sts2State.TurnNumber > _frozenTurn) CheckFrozen(history, me, youDied: _youDied);
             if (_projectionDue && MovesRolled(me))
             {
                 CheckProjection(history);
@@ -382,7 +394,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         }
         else if (_wasPlayerTurn && _last != null)
         {
-            // Ending the turn just started: freeze the last forecast.
+            // Ending the turn just started: freeze the last forecast. A death before it (you were dead all turn, a teammate playing on) isn't this
+            // turn's: the forecast was made with you dead (a dev review: "you died" reported as the next turn began).
+            _youDied = false;
             _frozen = _last.Full; // teammates' hands included (decision #25: the check uses everything that isn't a roll)
             if (_frozen == null && _last.PendingFull is { } pendingJob)
             {

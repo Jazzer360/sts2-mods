@@ -2134,8 +2134,9 @@ public static partial class SimAdapter
 
     /// <summary>
     /// CardPileCmd.Add: into your hand from your piles (HandTakeOf: TakeToHandAction per pile, a choice of how many is unknown); back onto your
-    /// draw pile after a pick from your hand (Glimmer, Thinking Ahead: the pick's most); your whole hand moved (Reboot: it leaves, setting
-    /// off nothing). Anything else (a pick from your discard pile onto your draw pile, into a teammate's hand) changes nothing simulated, except a pick
+    /// draw pile after a pick from your hand (Glimmer, Thinking Ahead: the pick's most); a pick from your discard pile onto your draw pile's top (Wah Ki,
+    /// Cosmic Indifference: PickDiscardOntoDrawTopAction, so a draw after it draws that card); your whole hand moved (Reboot: it leaves, setting
+    /// off nothing). Anything else (into a teammate's hand) changes nothing simulated, except a pick
     /// onto your draw pile's top from a pile holding a card that acts from there as your turn ends (I Am Invincible: Cosmic Indifference from your
     /// discard pile, Photon Cut from your hand): which card goes there is your later decision, so what follows is unknown (PickOntoTopUnknown).
     /// </summary>
@@ -2157,6 +2158,14 @@ public static partial class SimAdapter
         var pile = Argument(command, 1);
         var drawPile = ((int)PileType.Draw).ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (pile == drawPile && found.Pick != null && PickMayTopWithACardActingThere(command, found, play)) actions.Add(new NotModelledAction(PickOntoTopUnknown));
+        if (pile == drawPile && found.Pick != null && OntoTop(command)
+            && new CardEffects.CardsTaken(command, found.Condition, CardEffects.TakeWay.Picked, Items: null, found.Pick).PickPile == PileType.Discard)
+        {
+            // Its tests are the pick's (a card picked: the discard pile held one; Cosmic Indifference's, that it's in your draw or discard pile, which a
+            // card just picked from your discard pile is), and the action asks the first itself (an empty discard pile moves nothing).
+            actions.Add(new PickDiscardOntoDrawTopAction());
+            return (actions, ProgramCondition.Always);
+        }
         if (pile == drawPile && found.Pick is { Command.Name: "FromHand" } pick)
         {
             var take = new CardEffects.CardsTaken(command, found.Condition, CardEffects.TakeWay.Picked, Items: null, pick);
@@ -2170,6 +2179,10 @@ public static partial class SimAdapter
         }
         return (actions, null);
     }
+
+    /// <summary>CardPileCmd.Add's position is the top (CardPilePosition.Top), read.</summary>
+    private static bool OntoTop(CommandStep add) =>
+        Argument(add, 2) == ((int)CardPilePosition.Top).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     internal const string PickOntoTopUnknown = "you choose which card goes on top of your draw pile, and one you could pick plays itself from there as your turn ends";
 

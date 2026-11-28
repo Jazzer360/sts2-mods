@@ -360,6 +360,12 @@ public sealed record LeaveHandAction(int Count) : SimAction
 }
 
 /// <summary>
+/// A card you pick from the playing player's discard pile put on top of their draw pile (CardPileCmd.Add to PileType.Draw at CardPilePosition.Top
+/// after a CardSelectCmd pick from the discard pile: Wah Ki, Cosmic Indifference), when the discard pile holds one: SimEngine.PickDiscardOntoDrawTop.
+/// </summary>
+public sealed record PickDiscardOntoDrawTopAction : SimAction;
+
+/// <summary>
 /// Where a count a play's action uses comes from (decision #189): a number the adapter gave, or something the simulator reads on its own
 /// state when the action runs, so a replay's later play counts the board the earlier ones left.
 /// </summary>

@@ -273,7 +273,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     /// in its methods, including async ones (their state machines' MoveNext). Read once per class
     /// from the compiled code, so new and changed cards are covered without a table.
     /// </summary>
-    private static HashSet<Type> PowersAppliedInCode(Type cardType)
+    internal static HashSet<Type> PowersAppliedInCode(Type cardType)
     {
         if (AppliedInCode.TryGetValue(cardType, out var cached)) return cached;
         var set = new HashSet<Type>();
