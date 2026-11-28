@@ -364,6 +364,8 @@ public static partial class SimEngine
                 if (taker.TurnEndCards.FindIndex(card => card.Card == gone.Card && card.Amount == gone.Amount) is var at and >= 0)
                     taker.TurnEndCards = taker.TurnEndCards.Where((_, index) => index != at).ToList();
         }
+        // The cards in your hand it could pick, before they leave: which go on top of your draw pile (TakeFromHandAction.OntoDrawTop).
+        var candidates = Math.Max(0, player.HandCount - player.PlayingFromHand);
         if (take.Leaves && count > 0)
         {
             var wholeHand = take.Way == HandTakeWay.Each && take.Filter == null;
@@ -379,6 +381,7 @@ public static partial class SimEngine
                 }
             if (wholeHand) state.TakeMatching = ZeroedMatching(state.TakeMatching);
         }
+        if (take.OntoDrawTop is { } handProfiles && count > 0) PutOntoDrawTop(state, owner, handProfiles, candidates, count);
         state.PlayTaken = count;
         return TakenEvents(new[] { state }, take, cardEvent, count);
     }
@@ -575,14 +578,41 @@ public static partial class SimEngine
         if (!DrawsFromPile(state, owner)) return;
         var pile = state.Player(owner)!.Draw!;
         if (pile.Discard.Count == 0) return;
-        var index = pile.Discard.FindIndex(group => group.Card.Plain);
-        if (index < 0 && pile.Discard.Count == 1) index = 0;
-        var card = index >= 0 ? pile.Discard[index].Card : new SimDrawCard(UnreadPick) { Unread = UnreadPick };
+        var (index, card) = PickedProfile(pile.Discard, othersMayBePicked: false, UnreadPick);
         if (index < 0) index = pile.Discard.IndexOf(pile.Discard.MaxBy(group => group.Count)!);
         state.MutablePlayer(owner).Draw = pile.WithoutOneDiscarded(index).WithTopAt(index: 0, card);
     }
 
     private const string UnreadPick = "you choose which card of your discard pile goes on top of your draw pile, and the simulation follows each of them";
+
+    /// <summary>
+    /// The card a pick takes among <paramref name="groups"/> (a pile's or a hand's cards by profile), as a choice inside a play takes one (decision #167):
+    /// a plain one when there is one; else the one profile they hold, unless cards not among them may be picked too (<paramref name="othersMayBePicked"/>:
+    /// they joined the hand during the play); else a card of unknown kind (SimDrawCard.Unread, <paramref name="unread"/>: drawn or taken, the branch is
+    /// unknown), with no group (-1). Its index among the groups, and the card.
+    /// </summary>
+    private static (int Index, SimDrawCard Card) PickedProfile(IReadOnlyList<SimDrawGroup> groups, bool othersMayBePicked, string unread)
+    {
+        for (var i = 0; i < groups.Count; i++)
+            if (groups[i].Card.Plain) return (i, groups[i].Card);
+        if (groups.Count == 1 && !othersMayBePicked) return (0, groups[0].Card);
+        return (-1, new SimDrawCard(unread) { Unread = unread });
+    }
+
+    /// <summary>
+    /// Cards picked from your hand put on top of your draw pile (TakeFromHandAction.OntoDrawTop: Glimmer, Thinking Ahead, Photon Cut), each above the last,
+    /// so a draw later in the simulation draws them, not a shuffle (their AfterCardDrawn listeners hear the card they are). Each is the pick's card among
+    /// the hand's cards as the play started (<paramref name="handProfiles"/>, PickedProfile): a card that joined the hand since (<paramref name="inHand"/>
+    /// more than they hold: one the play drew) may be the one picked. With no pile read, only the hand's count moved (TakeFromHand).
+    /// </summary>
+    private static void PutOntoDrawTop(SimState state, int owner, IReadOnlyList<SimDrawGroup> handProfiles, int inHand, int count)
+    {
+        if (!DrawsFromPile(state, owner)) return;
+        var joined = inHand > handProfiles.Sum(group => group.Count);
+        for (var i = 0; i < count; i++) OnTop(state, owner, PickedProfile(handProfiles, joined, UnreadHandPick).Card);
+    }
+
+    private const string UnreadHandPick = "you choose which card of your hand goes on top of your draw pile, and the simulation follows each of them";
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>
     private static void Count(SimState state, SimCardPlay play, PlayStage stage)

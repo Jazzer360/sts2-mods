@@ -421,6 +421,13 @@ public sealed record TakeFromHandAction(HandTakeWay Way) : SimAction
     /// <summary>From the owner's draw pile instead of the hand (Cleanse): the pick is a card of the pile (decision #188).</summary>
     public bool FromDrawPile { get; init; }
     /// <summary>
+    /// The cards it takes go on top of the owner's draw pile (CardPileCmd.Add to PileType.Draw at CardPilePosition.Top after a pick from the hand: Glimmer,
+    /// Thinking Ahead, Photon Cut), so a draw later in the simulation draws them: the cards in the hand as the play starts by profile, the card played
+    /// left out (the board read's: SimEngine.PutOntoDrawTop picks among them; empty when they aren't read). Null: they go nowhere the simulation follows.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public IReadOnlyList<SimDrawGroup>? OntoDrawTop { get; init; }
+    /// <summary>
     /// You choose how many it takes (a selector whose least and most differ: Ashwater's 0 to any, Purity's up to 3, Gambler's Brew's discard): how many is
     /// your later decision (decision #406), so with a card it could take, what follows from it is unknown.
     /// </summary>

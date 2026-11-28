@@ -2134,7 +2134,8 @@ public static partial class SimAdapter
 
     /// <summary>
     /// CardPileCmd.Add: into your hand from your piles (HandTakeOf: TakeToHandAction per pile, a choice of how many is unknown); back onto your
-    /// draw pile after a pick from your hand (Glimmer, Thinking Ahead: the pick's most); a pick from your discard pile onto your draw pile's top (Wah Ki,
+    /// draw pile's top after a pick from your hand (Glimmer, Thinking Ahead, Photon Cut: the pick's most, joining the draw pile as the hand's cards are,
+    /// TakeFromHandAction.OntoDrawTop, so a draw after it draws them); a pick from your discard pile onto your draw pile's top (Wah Ki,
     /// Cosmic Indifference: PickDiscardOntoDrawTopAction, so a draw after it draws that card); your whole hand moved (Reboot: it leaves, setting
     /// off nothing). Anything else (into a teammate's hand) changes nothing simulated, except a pick
     /// onto your draw pile's top from a pile holding a card that acts from there as your turn ends (I Am Invincible: Cosmic Indifference from your
@@ -2169,7 +2170,11 @@ public static partial class SimAdapter
         if (pile == drawPile && found.Pick is { Command.Name: "FromHand" } pick)
         {
             var take = new CardEffects.CardsTaken(command, found.Condition, CardEffects.TakeWay.Picked, Items: null, pick);
-            actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Most = Number(play, take.PerPick, fallback: 1) });
+            // Onto its top (CardPilePosition.Top): the cards drawn later in the simulation, as the hand's cards are (the board read's profiles, the card
+            // played left out; none read in a play built before its piles are: a card picked there is of unknown kind). Another position no card uses.
+            if (!OntoTop(command) && Argument(command, 2) is { } position && int.TryParse(position, out _))
+                actions.Add(new NotModelledAction("a card from your hand put into your draw pile somewhere other than its top"));
+            actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Most = Number(play, take.PerPick, fallback: 1), OntoDrawTop = OntoTop(command) ? HandProfiles(play) : null });
             return (actions, ProgramCondition.Always);
         }
         if (MovesYourWholeHand(command, play))
@@ -2178,6 +2183,17 @@ public static partial class SimAdapter
             return (actions, null);
         }
         return (actions, null);
+    }
+
+    /// <summary>
+    /// The cards in your hand but the one played, by their draw-pile profiles (the board read's), for a card a pick from there puts into your draw pile;
+    /// empty in a play built before the board's piles are read.
+    /// </summary>
+    private static List<SimDrawGroup> HandProfiles(StepPlay play)
+    {
+        if (DrawProfilesOf(play.Ids) is not { } profiles) return new List<SimDrawGroup>();
+        return PileType.Hand.GetPile(play.Me).Cards.Where(other => other != play.Card).Select(other => profiles.GetValueOrDefault(other)).OfType<SimDrawCard>()
+            .GroupBy(profile => profile.Key).Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList();
     }
 
     /// <summary>CardPileCmd.Add's position is the top (CardPilePosition.Top), read.</summary>
@@ -2229,14 +2245,9 @@ public static partial class SimAdapter
         // The hand the play moved into your draw pile before it (Reboot), by profile (the board read's own: unknown in a play built before its piles are).
         var movesHand = play.Program.Commands.TakeWhile(other => !ReferenceEquals(other, command))
             .Any(other => other.Command is { DeclaringType: "CardPileCmd", Name: "Add" } && MovesYourWholeHand(other, play));
-        var profiles = DrawProfilesOf(play.Ids);
-        if (movesHand && profiles == null)
+        if (movesHand && DrawProfilesOf(play.Ids) == null)
             return (new List<SimAction> { new NotModelledAction("your hand shuffled in by a play built before the board's piles are read") }, null);
-        var handIn = movesHand
-            ? PileType.Hand.GetPile(play.Me).Cards.Where(other => other != play.Card).Select(other => profiles!.GetValueOrDefault(other)).OfType<SimDrawCard>()
-                .GroupBy(profile => profile.Key).Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()
-            : new List<SimDrawGroup>();
-        return (new List<SimAction> { new ShuffleDrawPileAction(handIn) }, null);
+        return (new List<SimAction> { new ShuffleDrawPileAction(movesHand ? HandProfiles(play) : new List<SimDrawGroup>()) }, null);
     }
 
     /// <summary>

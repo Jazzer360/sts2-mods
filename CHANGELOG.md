@@ -20,6 +20,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - The play audit no longer reports Legion of Bone in multiplayer as making fewer summons than predicted: it summons each player once, and the prediction is counted the same way.
 - The Shuffle tag showed a blank tab, without its discard-pile icon, in every fight after the game unloaded the art it was taken from.
 - Wah Ki (and Cosmic Indifference) put the card you pick from your discard pile on top of your draw pile, so a draw after it draws that card: the Shuffle tag no longer says that draw shuffles your discard pile in when your draw pile is empty.
+- Glimmer, Thinking Ahead and Photon Cut put the card you pick from your hand on top of your draw pile, so a draw after it draws that card (the card replayed by Burst or Echo Form): the preview no longer shuffles your discard pile in, or draws nothing, as if the card had left your piles.
 - Intent Forecast: Fossil Stalker's Suck gives it Strength for each hit of its attack that gets through, so its next attack is forecast with it (18, not 12).
 - Mourning Blow that wins the fight no longer counts itself back in your hand: the game moves no card once the fight is over.
 - The play audit no longer reports the Wither Withering Presence makes as an unexplained created card.

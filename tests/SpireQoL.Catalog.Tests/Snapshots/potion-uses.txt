@@ -1,6 +1,6 @@
 Ambergris [you]: HealAction { Amount = 500, Osty = False, Player =  }; ExtraTurnPower 1 on You
 Ambergris [teammate]: HealAction { Amount = 500, Osty = False, Player = -2 }; ExtraTurnPower 1 on teammate
-Ashwater [you]: ExhaustFromHandAction { Pick = Chosen, Only = None, Except = None, FromDrawPile = False }; TakeFromHandAction { Way = Pick, Event = Exhausted, Made = , EventIfNot = , Most = 999999999, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, ChoosesHowMany = True, EachCard = SpireQoL.Sim.SimAction[], TurnEndTaken =  }
+Ashwater [you]: ExhaustFromHandAction { Pick = Chosen, Only = None, Except = None, FromDrawPile = False }; TakeFromHandAction { Way = Pick, Event = Exhausted, Made = , EventIfNot = , Most = 999999999, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, OntoDrawTop = , ChoosesHowMany = True, EachCard = SpireQoL.Sim.SimAction[], TurnEndTaken =  }
 Ashwater [teammate]: ? Ashwater: CardCmd.Exhaust on a teammate's cards: not followed
 AttackPotion [you]: Generated 1
 AttackPotion [teammate]: ? AttackPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
@@ -13,7 +13,7 @@ BloodPotion [you]: HealAction { Amount = 200, Osty = False, Player =  }
 BloodPotion [teammate]: HealAction { Amount = 200, Osty = False, Player = -2 }
 BoneBrew [you]: SummonAction { Amount = 15, Player = -1 }
 BoneBrew [teammate]: SummonAction { Amount = 15, Player = -2 }
-BottledPotential [you]: TakeFromHandAction { Way = Each, Event = , Made = , EventIfNot = , Most = 1, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, ChoosesHowMany = False, EachCard = SpireQoL.Sim.SimAction[], TurnEndTaken =  }; ShuffleDrawPileAction { HandIn = System.Collections.Generic.List`1[SpireQoL.Sim.SimDrawGroup], WhenShorterThan = 0 }; Drawn 5
+BottledPotential [you]: TakeFromHandAction { Way = Each, Event = , Made = , EventIfNot = , Most = 1, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, OntoDrawTop = , ChoosesHowMany = False, EachCard = SpireQoL.Sim.SimAction[], TurnEndTaken =  }; ShuffleDrawPileAction { HandIn = System.Collections.Generic.List`1[SpireQoL.Sim.SimDrawGroup], WhenShorterThan = 0 }; Drawn 5
 BottledPotential [teammate]: ? BottledPotential: CardPileCmd.Add on a teammate's cards: not followed; ? BottledPotential: CardPileCmd.Shuffle on a teammate's cards: not followed
 BottledSong [you]: Generated 3
 BottledSong [teammate]: ? BottledSong: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed
@@ -58,13 +58,13 @@ FruitJuice [you]: GainMaxHpAction { Amount = 5, Player =  }
 FruitJuice [teammate]: GainMaxHpAction { Amount = 5, Player = -2 }
 FyshOil [you]: StrengthPower 1 on You; DexterityPower 1 on You
 FyshOil [teammate]: StrengthPower 1 on teammate; DexterityPower 1 on teammate
-GamblersBrew [you]: TakeFromHandAction { Way = Pick, Event = Discarded, Made = , EventIfNot = , Most = 999999999, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, ChoosesHowMany = True, EachCard = SpireQoL.Sim.SimAction[], TurnEndTaken =  }; Drawn 0
+GamblersBrew [you]: TakeFromHandAction { Way = Pick, Event = Discarded, Made = , EventIfNot = , Most = 999999999, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, OntoDrawTop = , ChoosesHowMany = True, EachCard = SpireQoL.Sim.SimAction[], TurnEndTaken =  }; Drawn 0
 GamblersBrew [teammate]: ? GamblersBrew: CardCmd.DiscardAndDraw on a teammate's cards: not followed
 GhostInAJar [you]: IntangiblePower 1 on You
 GhostInAJar [teammate]: IntangiblePower 1 on teammate
 GigantificationPotion [you]: GigantificationPower 1 on You
 GigantificationPotion [teammate]: GigantificationPower 1 on teammate
-GlowwaterPotion [you]: ExhaustFromHandAction { Pick = All, Only = None, Except = None, FromDrawPile = False }; TakeFromHandAction { Way = Each, Event = Exhausted, Made = , EventIfNot = , Most = 1, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, ChoosesHowMany = False, EachCard = System.Collections.Generic.List`1[SpireQoL.Sim.SimAction], TurnEndTaken =  }; Drawn 10
+GlowwaterPotion [you]: ExhaustFromHandAction { Pick = All, Only = None, Except = None, FromDrawPile = False }; TakeFromHandAction { Way = Each, Event = Exhausted, Made = , EventIfNot = , Most = 1, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, OntoDrawTop = , ChoosesHowMany = False, EachCard = System.Collections.Generic.List`1[SpireQoL.Sim.SimAction], TurnEndTaken =  }; Drawn 10
 GlowwaterPotion [teammate]: ? GlowwaterPotion: CardCmd.Exhaust on a teammate's cards: not followed
 HeartOfIron [you]: PlatingPower 7 on You
 HeartOfIron [teammate]: PlatingPower 7 on teammate
