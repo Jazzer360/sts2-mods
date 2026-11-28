@@ -190,7 +190,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         if (_read is { Pending: true, Job.Ready.IsCompleted: true } finished)
         {
             finished.MakeKey();
-            if (finished.Job!.Ready.IsFaulted) throw finished.Job.Ready.Exception!.GetBaseException(); // the frame loop reports it; the rows stay as the game reads them
+            // The frame loop reports it, with the worker's stack kept; the rows stay as the game reads them.
+            if (finished.Job!.Ready.IsFaulted) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(finished.Job.Ready.Exception!.GetBaseException()).Throw();
         }
         if (enemy == null || _read is not { } now)
         {

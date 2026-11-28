@@ -13,6 +13,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- Error reports from a card's or an enemy's prediction that failed name where in the prediction it failed (they named only the line that passed the failure on).
+- The play audit no longer reports Legion of Bone in multiplayer as making fewer summons than predicted: it summons each player once, and the prediction is counted the same way.
 - The Shuffle tag showed a blank tab, without its discard-pile icon, in every fight after the game unloaded the art it was taken from.
 - Wah Ki (and Cosmic Indifference) put the card you pick from your discard pile on top of your draw pile, so a draw after it draws that card: the Shuffle tag no longer says that draw shuffles your discard pile in when your draw pile is empty.
 - Intent Forecast: Fossil Stalker's Suck gives it Strength for each hit of its attack that gets through, so its next attack is forecast with it (18, not 12).

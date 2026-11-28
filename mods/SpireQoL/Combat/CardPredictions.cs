@@ -617,7 +617,8 @@ public sealed class CardPredictions
             prediction.SimPending = true;
             return false;
         }
-        if (task.Fault is { } fault) throw fault;
+        // Rethrown with the worker's stack kept (`throw fault` replaced it with this line: a dev review's two reports said only "FinishSim, line 620").
+        if (task.Fault is { } fault) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(fault).Throw();
         var outcomes = task.Latest;
         _cardTabs.Clear();
         _cardTabs.Indirect = _indirect;

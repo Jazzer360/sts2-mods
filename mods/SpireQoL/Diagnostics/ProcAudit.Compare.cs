@@ -14,11 +14,20 @@ namespace SpireQoL.Diagnostics;
 public sealed partial class ProcAudit
 {
     /// <summary>The summons in a simulated play's actions, those under a condition too (the most it can make).</summary>
-    private static int SummonsIn(IEnumerable<SimAction> actions) => actions.Sum(action => action switch
+    private static int SummonsIn(IEnumerable<SimAction> actions) => SummonActions(actions).Count();
+
+    /// <summary>
+    /// The most summons a simulated play's actions make for any one player (Legion of Bone summons each living player once: the audit counts the
+    /// game's summons the same way, per player; a dev review, "expected 2 summons, saw 1" in a two-player fight).
+    /// </summary>
+    private static int SummonsEachIn(IEnumerable<SimAction> actions) =>
+        SummonActions(actions).GroupBy(summon => summon.Player).Select(byPlayer => byPlayer.Count()).DefaultIfEmpty(0).Max();
+
+    private static IEnumerable<SummonAction> SummonActions(IEnumerable<SimAction> actions) => actions.SelectMany(action => action switch
     {
-        SummonAction => 1,
-        WhenAction conditioned => SummonsIn(conditioned.Then),
-        _ => 0,
+        SummonAction summon => new[] { summon },
+        WhenAction conditioned => SummonActions(conditioned.Then),
+        _ => Enumerable.Empty<SummonAction>(),
     });
 
     private static List<string> Compare(Window window, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, out ModelLines model)
@@ -348,7 +357,8 @@ public sealed partial class ProcAudit
         var orbs = entries.OfType<OrbChanneledEntry>().Count();
         // A card that summons every player (Legion of Bone) summons each up to its own count; any other card's summons all count as its own.
         var summoned = entries.OfType<SummonedEntry>().ToList();
-        var summons = Procs.Programs.CardEffects.SummonsEachPlayer(window.Card.GetType())
+        var eachPlayer = Procs.Programs.CardEffects.SummonsEachPlayer(window.Card.GetType());
+        var summons = eachPlayer
             ? summoned.GroupBy(summonedEntry => summonedEntry.Actor).Select(byActor => byActor.Count()).DefaultIfEmpty(0).Max()
             : summoned.Count;
         // Tabs that count the cards they make (Personal Hive's Dazed, decision #161): the cards created beyond the card's own are
@@ -406,7 +416,7 @@ public sealed partial class ProcAudit
             // The summons its simulated play makes, each of its plays (its SummonActions, those under a condition too: Dirge summons once for each
             // energy it spends); one a play for a card with a Summon value when its play isn't at hand.
             var ownSummons = prediction.Sim?.AimFor(window.Target) is { } aim && prediction.Sim.PlayByTarget.TryGetValue(aim, out var summonPlay)
-                ? SummonsIn(summonPlay.Body) * prediction.Plays
+                ? (eachPlayer ? SummonsEachIn(summonPlay.Body) : SummonsIn(summonPlay.Body)) * prediction.Plays
                 : window.Card.DynamicVars.ContainsKey("Summon") ? prediction.Plays : 0;
             Budget(Effect.Summon, "summons", summons, ownSummons);
         }
